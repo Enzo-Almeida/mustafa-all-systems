@@ -1,0 +1,155 @@
+import React from 'react';
+
+type NavigationContainerComponent = typeof import('@react-navigation/native')['NavigationContainer'];
+type StatusBarComponent = typeof import('expo-status-bar')['StatusBar'];
+type AuthProviderComponent = typeof import('./src/context/AuthContext')['AuthProvider'];
+type UseAuthHook = typeof import('./src/context/AuthContext')['useAuth'];
+type NavigatorComponent = React.ComponentType<any>;
+type LoadingScreenComponent = React.ComponentType<any>;
+
+console.log('🚀 App.tsx - Iniciando imports...');
+
+// Imports com tratamento de erro
+let NavigationContainer: NavigationContainerComponent | undefined;
+let StatusBar: StatusBarComponent | undefined;
+let AuthProvider: AuthProviderComponent | undefined;
+let useAuth: UseAuthHook | undefined;
+let AuthNavigator: NavigatorComponent | undefined;
+let MainNavigator: NavigatorComponent | undefined;
+let LoadingScreen: LoadingScreenComponent | undefined;
+
+try {
+  console.log('📦 Importando NavigationContainer...');
+  NavigationContainer = require('@react-navigation/native').NavigationContainer;
+  console.log('✅ NavigationContainer importado');
+} catch (error) {
+  console.error('❌ Erro ao importar NavigationContainer:', error);
+}
+
+try {
+  console.log('📦 Importando StatusBar...');
+  StatusBar = require('expo-status-bar').StatusBar;
+  console.log('✅ StatusBar importado');
+} catch (error) {
+  console.error('❌ Erro ao importar StatusBar:', error);
+}
+
+try {
+  console.log('📦 Importando AuthContext...');
+  const AuthContext = require('./src/context/AuthContext');
+  AuthProvider = AuthContext.AuthProvider;
+  useAuth = AuthContext.useAuth;
+  console.log('✅ AuthContext importado');
+} catch (error) {
+  console.error('❌ Erro ao importar AuthContext:', error);
+  throw error; // Este é crítico, não pode continuar sem
+}
+
+try {
+  console.log('📦 Importando AuthNavigator...');
+  AuthNavigator = require('./src/navigation/AuthNavigator').default;
+  console.log('✅ AuthNavigator importado');
+} catch (error) {
+  console.error('❌ Erro ao importar AuthNavigator:', error);
+  throw error;
+}
+
+try {
+  console.log('📦 Importando MainNavigator...');
+  MainNavigator = require('./src/navigation/MainNavigator').default;
+  console.log('✅ MainNavigator importado');
+} catch (error: any) {
+  const errorMsg = error?.message || error?.toString() || 'Erro desconhecido';
+  
+  // Ignorar erros de permissão (não são críticos, apenas avisos do Android)
+  if (errorMsg.includes('DETECT_SCREEN_CAPTURE') || 
+      errorMsg.includes('NativeUnimoduleProxy') ||
+      errorMsg.includes('registerScreenCaptureObserver')) {
+    console.warn('⚠️ Aviso de permissão ignorado ao importar MainNavigator:', errorMsg);
+    // Tentar novamente após ignorar o erro
+    try {
+      MainNavigator = require('./src/navigation/MainNavigator').default;
+      console.log('✅ MainNavigator importado após retry');
+    } catch (retryError) {
+      console.error('❌ Erro ao importar MainNavigator após retry:', retryError);
+      // Não lançar erro, deixar MainNavigator como undefined e tratar no AppNavigator
+    }
+  } else {
+    console.error('❌ Erro ao importar MainNavigator:', error);
+    // Não lançar erro, deixar MainNavigator como undefined e tratar no AppNavigator
+  }
+}
+
+try {
+  console.log('📦 Importando LoadingScreen...');
+  LoadingScreen = require('./src/components/LoadingScreen').default;
+  console.log('✅ LoadingScreen importado');
+} catch (error) {
+  console.error('❌ Erro ao importar LoadingScreen:', error);
+  throw error;
+}
+
+console.log('✅ Todos os imports concluídos');
+
+function AppNavigator() {
+  if (!useAuth || !LoadingScreen || !NavigationContainer || !AuthNavigator) {
+    console.error('❌ Dependências críticas de navegação não foram carregadas corretamente');
+    const { View, Text } = require('react-native');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#f00', marginBottom: 10 }}>Erro ao carregar navegação</Text>
+        <Text style={{ fontSize: 14, color: '#666' }}>Algumas dependências não foram carregadas. Reinicie o app.</Text>
+      </View>
+    );
+  }
+
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // Se MainNavigator não foi carregado, mostrar apenas AuthNavigator
+  if (!MainNavigator) {
+    console.warn('⚠️ MainNavigator não foi carregado, mostrando apenas AuthNavigator');
+    return (
+      <NavigationContainer>
+        <AuthNavigator />
+      </NavigationContainer>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      {user ? <MainNavigator /> : <AuthNavigator />}
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  console.log('🚀 App.tsx - Função App executada');
+  
+  if (!AuthProvider || !StatusBar) {
+    console.error('❌ AuthProvider ou StatusBar não foram carregados');
+    return null;
+  }
+
+  try {
+    return (
+      <AuthProvider>
+        <StatusBar style="light" />
+        <AppNavigator />
+      </AuthProvider>
+    );
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('❌ Erro ao renderizar App:', err);
+    const { View, Text } = require('react-native');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, color: '#f00', marginBottom: 10 }}>Erro ao carregar o app</Text>
+        <Text style={{ fontSize: 14, color: '#666' }}>{errorMessage}</Text>
+      </View>
+    );
+  }
+}

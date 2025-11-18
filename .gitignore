@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Mobile
+mobile/.expo/
+mobile/.expo-shared/
+mobile/ios/Pods/
+mobile/android/.gradle/
+mobile/android/app/build/
+
+# Backend
+backend/dist/
+backend/.env
+
+# Web
+web/dist/
+web/.env
+
+# Database
+*.db
+*.sqlite
+
+# AWS
+.aws/
+

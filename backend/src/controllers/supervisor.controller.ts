@@ -1,0 +1,605 @@
+import { Response } from 'express';
+import { z } from 'zod';
+import { AuthRequest } from '../middleware/auth';
+import prisma from '../prisma/client';
+import { UserRole } from '../../../shared/types';
+
+export async function getDashboard(req: AuthRequest, res: Response) {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // Total de promotores
+    const totalPromoters = await prisma.user.count({
+      where: { role: UserRole.PROMOTER },
+    });
+
+    // Visitas hoje
+    const visitsToday = await prisma.visit.count({
+      where: {
+        checkInAt: {
+          gte: today,
+        },
+      },
+    });
+
+    // Visitas esta semana
+    const visitsThisWeek = await prisma.visit.count({
+      where: {
+        checkInAt: {
+          gte: startOfWeek,
+        },
+      },
+    });
+
+    // Visitas este mês
+    const visitsThisMonth = await prisma.visit.count({
+      where: {
+        checkInAt: {
+          gte: startOfMonth,
+        },
+      },
+    });
+
+    // Promotores ativos hoje
+    const activePromotersToday = await prisma.visit.groupBy({
+      by: ['promoterId'],
+      where: {
+        checkInAt: {
+          gte: today,
+        },
+      },
+    });
+
+    // Visitas por promotor (últimos 7 dias)
+    const visitsByPromoter = await prisma.visit.groupBy({
+      by: ['promoterId'],
+      where: {
+        checkInAt: {
+          gte: startOfWeek,
+        },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    // Horas trabalhadas hoje
+    const visitsWithHours = await prisma.visit.findMany({
+      where: {
+        checkInAt: {
+          gte: today,
+        },
+        checkOutAt: {
+          not: null,
+        },
+      },
+      select: {
+        checkInAt: true,
+        checkOutAt: true,
+      },
+    });
+
+    const totalHoursToday = visitsWithHours.reduce((total, visit) => {
+      if (visit.checkOutAt) {
+        const hours = (visit.checkOutAt.getTime() - visit.checkInAt.getTime()) / (1000 * 60 * 60);
+        return total + hours;
+      }
+      return total;
+    }, 0);
+
+    res.json({
+      stats: {
+        totalPromoters,
+        visitsToday,
+        visitsThisWeek,
+        visitsThisMonth,
+        activePromotersToday: activePromotersToday.length,
+        totalHoursToday: totalHoursToday.toFixed(2),
+      },
+      visitsByPromoter: visitsByPromoter.map((v) => ({
+        promoterId: v.promoterId,
+        visitCount: v._count.id,
+      })),
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+export async function getPromoterPerformance(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { startDate, endDate } = req.query;
+
+    const start = startDate ? new Date(startDate as string) : new Date();
+    start.setDate(start.getDate() - 30); // Últimos 30 dias por padrão
+    const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Verificar se o promotor existe
+    const promoter = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (!promoter || promoter.id !== id) {
+      return res.status(404).json({ message: 'Promotor não encontrado' });
+    }
+
+    // Visitas no período
+    const visits = await prisma.visit.findMany({
+      where: {
+        promoterId: id,
+        checkInAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        store: true,
+        photos: true,
+      },
+      orderBy: {
+        checkInAt: 'desc',
+      },
+    });
+
+    // Calcular estatísticas
+    const totalVisits = visits.length;
+    const completedVisits = visits.filter((v) => v.checkOutAt !== null).length;
+    const totalHours = visits
+      .filter((v) => v.checkOutAt !== null)
+      .reduce((total, visit) => {
+        if (visit.checkOutAt) {
+          const hours = (visit.checkOutAt.getTime() - visit.checkInAt.getTime()) / (1000 * 60 * 60);
+          return total + hours;
+        }
+        return total;
+      }, 0);
+
+    const totalPhotos = visits.reduce((total, visit) => total + visit.photos.length, 0);
+
+    // Visitas por dia (últimos 30 dias)
+    const visitsByDay = await prisma.visit.groupBy({
+      by: ['checkInAt'],
+      where: {
+        promoterId: id,
+        checkInAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    res.json({
+      promoter,
+      period: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      stats: {
+        totalVisits,
+        completedVisits,
+        totalHours: totalHours.toFixed(2),
+        totalPhotos,
+        averageHoursPerVisit: completedVisits > 0 ? (totalHours / completedVisits).toFixed(2) : '0',
+      },
+      visits: visits.map((visit) => ({
+        id: visit.id,
+        store: visit.store,
+        checkInAt: visit.checkInAt,
+        checkOutAt: visit.checkOutAt,
+        hoursWorked: visit.checkOutAt
+          ? ((visit.checkOutAt.getTime() - visit.checkInAt.getTime()) / (1000 * 60 * 60)).toFixed(2)
+          : null,
+        photoCount: visit.photos.length,
+        checkInPhotoUrl: visit.checkInPhotoUrl,
+        checkOutPhotoUrl: visit.checkOutPhotoUrl,
+      })),
+      visitsByDay: visitsByDay.map((v) => ({
+        date: v.checkInAt.toISOString().split('T')[0],
+        count: v._count.id,
+      })),
+    });
+  } catch (error) {
+    console.error('Promoter performance error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+export async function getPromoterVisits(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { page = '1', limit = '20' } = req.query;
+
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Verificar se o promotor existe
+    const promoter = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!promoter) {
+      return res.status(404).json({ message: 'Promotor não encontrado' });
+    }
+
+    // Buscar visitas
+    const [visits, total] = await Promise.all([
+      prisma.visit.findMany({
+        where: { promoterId: id },
+        include: {
+          store: true,
+          photos: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
+        orderBy: {
+          checkInAt: 'desc',
+        },
+        skip,
+        take: limitNum,
+      }),
+      prisma.visit.count({
+        where: { promoterId: id },
+      }),
+    ]);
+
+    res.json({
+      visits: visits.map((visit) => ({
+        id: visit.id,
+        store: visit.store,
+        checkInAt: visit.checkInAt,
+        checkOutAt: visit.checkOutAt,
+        checkInLatitude: visit.checkInLatitude,
+        checkInLongitude: visit.checkInLongitude,
+        checkOutLatitude: visit.checkOutLatitude,
+        checkOutLongitude: visit.checkOutLongitude,
+        checkInPhotoUrl: visit.checkInPhotoUrl,
+        checkOutPhotoUrl: visit.checkOutPhotoUrl,
+        hoursWorked: visit.checkOutAt
+          ? ((visit.checkOutAt.getTime() - visit.checkInAt.getTime()) / (1000 * 60 * 60)).toFixed(2)
+          : null,
+        photos: visit.photos,
+        photoCount: visit.photos.length,
+      })),
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error) {
+    console.error('Get promoter visits error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+export async function getPromoterRoute(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { date } = req.query;
+
+    const targetDate = date ? new Date(date as string) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Verificar se o promotor existe
+    const promoter = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!promoter) {
+      return res.status(404).json({ message: 'Promotor não encontrado' });
+    }
+
+    // Buscar visitas do dia
+    const visits = await prisma.visit.findMany({
+      where: {
+        promoterId: id,
+        checkInAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      include: {
+        store: true,
+        locations: {
+          orderBy: {
+            timestamp: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        checkInAt: 'asc',
+      },
+    });
+
+    // Construir rota
+    const route = visits.map((visit) => ({
+      id: visit.id,
+      store: visit.store,
+      checkInAt: visit.checkInAt,
+      checkOutAt: visit.checkOutAt,
+      checkInLocation: {
+        latitude: visit.checkInLatitude,
+        longitude: visit.checkInLongitude,
+      },
+      checkOutLocation: visit.checkOutAt
+        ? {
+            latitude: visit.checkOutLatitude!,
+            longitude: visit.checkOutLongitude!,
+          }
+        : null,
+      locations: visit.locations.map((loc) => ({
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        timestamp: loc.timestamp,
+      })),
+    }));
+
+    res.json({
+      date: targetDate.toISOString().split('T')[0],
+      promoter: {
+        id: promoter.id,
+        name: promoter.name,
+      },
+      route,
+      totalVisits: visits.length,
+    });
+  } catch (error) {
+    console.error('Get promoter route error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+export async function getMissingPhotos(req: AuthRequest, res: Response) {
+  try {
+    const { promoterId, startDate, endDate } = req.query;
+
+    const start = startDate ? new Date(startDate as string) : new Date();
+    start.setDate(start.getDate() - 30);
+    const end = endDate ? new Date(endDate as string) : new Date();
+
+    // Buscar visitas sem fotos adicionais (apenas check-in/checkout)
+    const visits = await prisma.visit.findMany({
+      where: {
+        ...(promoterId ? { promoterId: promoterId as string } : {}),
+        checkInAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        store: true,
+        photos: true,
+        promoter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Filtrar visitas com poucas fotos (apenas check-in/checkout)
+    const visitsWithMissingPhotos = visits.filter((visit) => {
+      const photoCount = visit.photos.length;
+      // Considerar que faltam fotos se tiver apenas 1 ou 2 fotos (check-in e checkout)
+      return photoCount <= 2;
+    });
+
+    res.json({
+      period: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+      },
+      missingPhotos: visitsWithMissingPhotos.map((visit) => ({
+        visitId: visit.id,
+        promoter: visit.promoter,
+        store: visit.store,
+        checkInAt: visit.checkInAt,
+        checkOutAt: visit.checkOutAt,
+        photoCount: visit.photos.length,
+        expectedPhotos: 3, // Mínimo esperado
+      })),
+      total: visitsWithMissingPhotos.length,
+    });
+  } catch (error) {
+    console.error('Get missing photos error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+const setPhotoQuotaSchema = z.object({
+  expectedPhotos: z.number().int().positive(),
+});
+
+export async function setPhotoQuota(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { expectedPhotos } = setPhotoQuotaSchema.parse(req.body);
+
+    // Verificar se o promotor existe
+    const promoter = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!promoter) {
+      return res.status(404).json({ message: 'Promotor não encontrado' });
+    }
+
+    // Criar ou atualizar quota
+    const quota = await prisma.photoQuota.upsert({
+      where: { promoterId: id },
+      update: {
+        expectedPhotos,
+      },
+      create: {
+        promoterId: id,
+        expectedPhotos,
+      },
+    });
+
+    res.json({
+      quota,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: 'Validation error', errors: error.errors });
+    }
+    console.error('Set photo quota error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+const exportReportSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  promoterIds: z.array(z.string().uuid()).optional(),
+  storeIds: z.array(z.string().uuid()).optional(),
+  format: z.enum(['pptx', 'pdf', 'excel', 'html']),
+});
+
+export async function exportReport(req: AuthRequest, res: Response) {
+  try {
+    const { startDate, endDate, promoterIds, storeIds, format } = exportReportSchema.parse(
+      req.body
+    );
+    const userId = req.userId!;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Fim do dia
+
+    // Criar job de exportação
+    const exportJob = await prisma.exportJob.create({
+      data: {
+        userId,
+        status: 'processing',
+        progress: 0,
+        format,
+        filters: {
+          startDate,
+          endDate,
+          promoterIds: promoterIds || [],
+          storeIds: storeIds || [],
+        },
+      },
+    });
+
+    // Gerar relatório em background (simulado - em produção usar queue)
+    setImmediate(async () => {
+      try {
+        const {
+          generatePowerPointReport,
+          generatePDFReport,
+          generateExcelReport,
+          generateHTMLReport,
+        } = await import('../services/export.service');
+
+        let buffer: Buffer | string;
+        let contentType: string;
+        let filename: string;
+
+        switch (format) {
+          case 'pptx':
+            buffer = await generatePowerPointReport({
+              startDate: start,
+              endDate: end,
+              promoterIds,
+              storeIds,
+              format,
+            });
+            contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+            filename = `relatorio-${startDate}-${endDate}.pptx`;
+            break;
+          case 'pdf':
+            buffer = await generatePDFReport({
+              startDate: start,
+              endDate: end,
+              promoterIds,
+              storeIds,
+              format,
+            });
+            contentType = 'application/pdf';
+            filename = `relatorio-${startDate}-${endDate}.pdf`;
+            break;
+          case 'excel':
+            buffer = await generateExcelReport({
+              startDate: start,
+              endDate: end,
+              promoterIds,
+              storeIds,
+              format,
+            });
+            contentType =
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            filename = `relatorio-${startDate}-${endDate}.xlsx`;
+            break;
+          case 'html':
+            buffer = await generateHTMLReport({
+              startDate: start,
+              endDate: end,
+              promoterIds,
+              storeIds,
+              format,
+            });
+            contentType = 'text/html';
+            filename = `relatorio-${startDate}-${endDate}.html`;
+            break;
+          default:
+            throw new Error('Formato não suportado');
+        }
+
+        // Salvar arquivo (em produção, salvar no S3 ou sistema de arquivos)
+        // Por enquanto, vamos retornar o buffer diretamente
+        const downloadUrl = `/api/supervisors/export/download/${exportJob.id}`;
+
+        await prisma.exportJob.update({
+          where: { id: exportJob.id },
+          data: {
+            status: 'completed',
+            progress: 100,
+            downloadUrl,
+          },
+        });
+      } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        await prisma.exportJob.update({
+          where: { id: exportJob.id },
+          data: {
+            status: 'failed',
+          },
+        });
+      }
+    });
+
+    res.json({
+      jobId: exportJob.id,
+      status: exportJob.status,
+      message: 'Relatório sendo gerado. Use o jobId para verificar o status.',
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: 'Validation error', errors: error.errors });
+    }
+    console.error('Export report error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+

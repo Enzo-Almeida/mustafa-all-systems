@@ -1,0 +1,172 @@
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para adicionar token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Interceptor para tratar erros 401
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token inválido ou expirado - limpar e redirecionar para login
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const supervisorService = {
+  async getDashboard() {
+    const response = await apiClient.get('/supervisors/dashboard');
+    return response.data;
+  },
+
+  async getPromoters() {
+    const response = await apiClient.get('/supervisors/promoters');
+    return response.data;
+  },
+
+  async getPromoterPerformance(promoterId: string, startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const response = await apiClient.get(
+      `/supervisors/promoters/${promoterId}/performance?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  async getPromoterVisits(promoterId: string, page = 1, limit = 20) {
+    const response = await apiClient.get(
+      `/supervisors/promoters/${promoterId}/visits?page=${page}&limit=${limit}`
+    );
+    return response.data;
+  },
+
+  async getPromoterRoute(promoterId: string, date?: string) {
+    const params = date ? `?date=${date}` : '';
+    const response = await apiClient.get(`/supervisors/promoters/${promoterId}/route${params}`);
+    return response.data;
+  },
+
+  async getMissingPhotos(promoterId?: string, startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (promoterId) params.append('promoterId', promoterId);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const response = await apiClient.get(`/supervisors/missing-photos?${params.toString()}`);
+    return response.data;
+  },
+
+  async setPhotoQuota(promoterId: string, expectedPhotos: number) {
+    const response = await apiClient.put(`/supervisors/promoters/${promoterId}/photo-quota`, {
+      expectedPhotos,
+    });
+    return response.data;
+  },
+
+  async exportReport(data: {
+    startDate: string;
+    endDate: string;
+    promoterIds?: string[];
+    storeIds?: string[];
+    format: 'pptx' | 'pdf' | 'excel' | 'html';
+  }) {
+    const response = await apiClient.post('/supervisors/export/report', data);
+    return response.data;
+  },
+
+  async getExportStatus(jobId: string) {
+    const response = await apiClient.get(`/supervisors/export/status/${jobId}`);
+    return response.data;
+  },
+
+  async downloadExport(jobId: string) {
+    const response = await apiClient.get(`/supervisors/export/download/${jobId}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Rotas de configuração de rotas
+  async setPromoterRoute(promoterId: string, storeIds: string[], orders?: number[]) {
+    const response = await apiClient.post(`/supervisors/promoters/${promoterId}/route-assignment`, {
+      storeIds,
+      orders,
+    });
+    return response.data;
+  },
+
+  async getPromoterRouteAssignment(promoterId: string) {
+    const response = await apiClient.get(`/supervisors/promoters/${promoterId}/route-assignment`);
+    return response.data;
+  },
+
+  async getAllRoutes() {
+    const response = await apiClient.get('/supervisors/routes');
+    return response.data;
+  },
+
+  async getAvailableStores() {
+    const response = await apiClient.get('/supervisors/stores/available');
+    return response.data;
+  },
+
+  // Rotas de gerenciamento de lojas
+  async getAllStores() {
+    const response = await apiClient.get('/supervisors/stores');
+    return response.data;
+  },
+
+  async getStore(storeId: string) {
+    const response = await apiClient.get(`/supervisors/stores/${storeId}`);
+    return response.data;
+  },
+
+  async createStore(data: {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+  }) {
+    const response = await apiClient.post('/supervisors/stores', data);
+    return response.data;
+  },
+
+  async updateStore(storeId: string, data: {
+    name?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  }) {
+    const response = await apiClient.put(`/supervisors/stores/${storeId}`, data);
+    return response.data;
+  },
+
+  async deleteStore(storeId: string) {
+    const response = await apiClient.delete(`/supervisors/stores/${storeId}`);
+    return response.data;
+  },
+};
+

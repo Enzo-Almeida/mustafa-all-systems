@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PROMOTER
+  SUPERVISOR
+}
+
+enum PhotoType {
+  FACADE_CHECKIN
+  FACADE_CHECKOUT
+  OTHER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  visitsAsPromoter Visit[]
+  photoQuotas      PhotoQuota[]
+  routeAssignments RouteAssignment[]
+}
+
+model Store {
+  id        String   @id @default(uuid())
+  name      String
+  address   String
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  visits         Visit[]
+  priceResearch  PriceResearch[]
+  routeAssignments RouteAssignment[]
+}
+
+model Visit {
+  id               String    @id @default(uuid())
+  promoterId       String
+  storeId          String
+  checkInAt        DateTime
+  checkOutAt       DateTime?
+  checkInLatitude  Float
+  checkInLongitude Float
+  checkOutLatitude Float?
+  checkOutLongitude Float?
+  checkInPhotoUrl  String
+  checkOutPhotoUrl String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  promoter       User          @relation(fields: [promoterId], references: [id])
+  store          Store         @relation(fields: [storeId], references: [id])
+  photos         Photo[]
+  priceResearch  PriceResearch[]
+  locations      Location[]
+
+  @@index([promoterId])
+  @@index([storeId])
+  @@index([checkInAt])
+}
+
+model Photo {
+  id        String    @id @default(uuid())
+  visitId   String
+  url       String
+  type      PhotoType
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime  @default(now())
+
+  // Relations
+  visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([visitId])
+  @@index([type])
+}
+
+model PriceResearch {
+  id        String   @id @default(uuid())
+  visitId   String
+  storeId   String
+  productName String
+  price     Float
+  competitorPrices Json // Array of {competitorName: string, price: number}
+  createdAt DateTime @default(now())
+
+  // Relations
+  visit    Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  store    Store    @relation(fields: [storeId], references: [id])
+
+  @@index([visitId])
+  @@index([storeId])
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  visitId   String
+  latitude  Float
+  longitude Float
+  timestamp DateTime @default(now())
+
+  // Relations
+  visit Visit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([visitId])
+  @@index([timestamp])
+}
+
+model PhotoQuota {
+  id            String   @id @default(uuid())
+  promoterId    String   @unique
+  expectedPhotos Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  promoter User @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+
+  @@index([promoterId])
+}
+
+model ExportJob {
+  id         String   @id @default(uuid())
+  userId     String
+  status     String   @default("pending") // pending, processing, completed, failed
+  progress   Int      @default(0)
+  downloadUrl String?
+  format     String   // pptx, pdf, excel, html
+  filters    Json     // {startDate, endDate, promoterIds, storeIds}
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model RouteAssignment {
+  id        String   @id @default(uuid())
+  promoterId String
+  storeId   String
+  order     Int      @default(0) // Ordem de visita sugerida
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  promoter User  @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+  store    Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([promoterId, storeId])
+  @@index([promoterId])
+  @@index([storeId])
+  @@index([isActive])
+}
+

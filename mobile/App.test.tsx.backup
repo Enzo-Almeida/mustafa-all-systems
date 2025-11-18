@@ -1,0 +1,34 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+
+// Versão mínima do App para testar se o problema é com os imports
+export default function App() {
+  console.log('✅ App.test.tsx carregado com sucesso!');
+  
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>✅ App funcionando!</Text>
+      <Text style={styles.subtext}>Se você vê isso, o registro está funcionando.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  text: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  subtext: {
+    fontSize: 16,
+    color: '#666',
+  },
+});
+
