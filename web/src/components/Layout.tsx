@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 // Ícones SVG com cores da marca
 const DashboardIcon = ({ active }: { active: boolean }) => (
   <svg
-    className={`w-5 h-5 ${active ? 'text-violet-600' : 'text-gray-500'}`}
+    className={`w-5 h-5 ${active ? 'text-primary-400' : 'text-text-tertiary'}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -59,7 +59,7 @@ const SettingsIcon = ({ active }: { active: boolean }) => (
 
 const LogoutIcon = () => (
   <svg
-    className="w-5 h-5 text-gray-500"
+    className="w-5 h-5 text-text-tertiary"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -165,22 +165,28 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-dark-background flex">
       {/* Sidebar */}
       <aside
         className={`${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         } ${
           isSidebarExpanded ? 'w-64' : 'w-20'
-        } bg-white border-r border-gray-200 fixed lg:static h-screen transition-all duration-300 ease-in-out z-30`}
+        } bg-dark-backgroundSecondary border-r border-dark-border fixed lg:static h-screen transition-all duration-300 ease-in-out z-30`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border">
             {isSidebarExpanded && (
-              <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-violet-700 to-amber-500 bg-clip-text text-transparent">
-                Promo Gestão
-              </h1>
+              <div className="flex items-center gap-3">
+                <img src="/logo.png" alt="Promo Gestão" className="h-8 w-8" />
+                <h1 className="text-xl font-bold text-text-primary">
+                  Promo Gestão
+                </h1>
+              </div>
+            )}
+            {!isSidebarExpanded && (
+              <img src="/logo.png" alt="Promo Gestão" className="h-8 w-8 mx-auto" />
             )}
             <button
               onClick={() => {
@@ -190,7 +196,7 @@ export default function Layout() {
                   setIsMobileMenuOpen(false);
                 }
               }}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg hover:bg-dark-card transition-colors text-text-secondary hover:text-text-primary"
             >
               <MenuIcon />
             </button>
@@ -207,8 +213,8 @@ export default function Layout() {
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                     active
-                      ? 'bg-gradient-to-r from-violet-50 to-violet-100/50 text-violet-700 font-medium shadow-sm border-l-4 border-violet-600'
-                      : 'text-gray-700 hover:bg-violet-50/50 hover:text-violet-700'
+                      ? 'bg-primary-600/20 text-primary-400 font-medium shadow-primary border-l-4 border-primary-600 glow-primary'
+                      : 'text-text-secondary hover:bg-primary-600/10 hover:text-primary-400'
                   }`}
                   title={!isSidebarExpanded ? item.name : ''}
                 >
@@ -220,18 +226,18 @@ export default function Layout() {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-dark-border p-4">
             {isSidebarExpanded && (
               <div className="mb-3 px-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-amber-500 flex items-center justify-center text-white font-semibold shadow-lg">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-accent-500 flex items-center justify-center text-text-primary font-semibold shadow-primary">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-medium text-text-primary truncate">
                       {user?.name || 'Usuário'}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-text-tertiary truncate">
                       {user?.email || ''}
                     </p>
                   </div>
@@ -240,7 +246,7 @@ export default function Layout() {
             )}
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-text-secondary hover:bg-error-500/20 hover:text-error-500 transition-all duration-200 ${
                 !isSidebarExpanded ? 'justify-center' : ''
               }`}
               title={!isSidebarExpanded ? 'Sair' : ''}
@@ -255,21 +261,21 @@ export default function Layout() {
       {/* Main Content */}
       <div className="flex-1 lg:ml-0 transition-all duration-300">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <header className="bg-dark-backgroundSecondary border-b border-dark-border sticky top-0 z-20 shadow-card">
           <div className="px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="lg:hidden p-2 rounded-lg hover:bg-dark-card transition-colors text-text-secondary hover:text-text-primary"
                 >
                   <MenuIcon />
                 </button>
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-text-primary">
                     {navigation.find((item) => isActive(item.path))?.name || 'Dashboard'}
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1 hidden sm:block">
+                  <p className="text-sm text-text-tertiary mt-1 hidden sm:block">
                     {new Date().toLocaleDateString('pt-BR', {
                       weekday: 'long',
                       year: 'numeric',
@@ -284,7 +290,7 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <main className="p-6">
+        <main className="p-6 bg-dark-background min-h-screen">
           <Outlet />
         </main>
       </div>
@@ -292,7 +298,7 @@ export default function Layout() {
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-70 z-20 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

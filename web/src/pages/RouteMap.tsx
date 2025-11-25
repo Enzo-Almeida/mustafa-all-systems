@@ -65,15 +65,15 @@ export default function RouteMap() {
         </Link>
         <h1 className="text-3xl font-bold">Rastreabilidade de Rota</h1>
         {promoter && (
-          <p className="text-gray-600 mt-2">
+          <p className="text-text-secondary mt-2">
             {promoter.name} - {format(new Date(selectedDate), 'dd/MM/yyyy')}
           </p>
         )}
       </div>
 
       {/* Filtro de Data */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
+      <div className="bg-dark-card rounded-lg shadow p-4 mb-6">
+        <label className="block text-sm font-medium text-text-700 mb-2">Data</label>
         <input
           type="date"
           value={selectedDate}
@@ -83,7 +83,7 @@ export default function RouteMap() {
       </div>
 
       {/* Mapa */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-dark-card rounded-lg shadow overflow-hidden">
         <div style={{ height: '600px', width: '100%' }}>
           <MapContainer
             center={center}
@@ -138,29 +138,29 @@ export default function RouteMap() {
       </div>
 
       {/* Lista de Visitas */}
-      <div className="bg-white rounded-lg shadow mt-6">
+      <div className="bg-dark-card rounded-lg shadow mt-6">
         <div className="p-6 border-b">
           <h2 className="text-xl font-bold">Visitas do Dia</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-dark-backgroundSecondary">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
                   Loja
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
                   Check-in
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
                   Checkout
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">
                   Tempo
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-dark-card divide-y divide-gray-200">
               {route.map((visit: any) => {
                 const hoursWorked = visit.checkOutAt
                   ? ((new Date(visit.checkOutAt).getTime() - new Date(visit.checkInAt).getTime()) /
@@ -168,16 +168,16 @@ export default function RouteMap() {
                   : null;
                 return (
                   <tr key={visit.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                       {visit.store?.name || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-tertiary">
                       {format(new Date(visit.checkInAt), 'HH:mm')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-tertiary">
                       {visit.checkOutAt ? format(new Date(visit.checkOutAt), 'HH:mm') : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                       {hoursWorked ? `${hoursWorked}h` : '-'}
                     </td>
                   </tr>

@@ -21,15 +21,15 @@ export default function Button({
   
   const variants = {
     primary:
-      'bg-gradient-to-r from-violet-600 to-violet-700 text-white hover:from-violet-700 hover:to-violet-800 focus:ring-violet-500 shadow-lg shadow-violet-500/30',
+      'bg-gradient-to-r from-primary-600 to-primary-700 text-text-primary hover:from-primary-700 hover:to-primary-800 focus:ring-primary-500 shadow-primary hover:shadow-primary-glow glow-primary-hover',
     accent:
-      'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 focus:ring-amber-500 shadow-lg shadow-amber-500/30',
+      'bg-gradient-to-r from-accent-500 to-accent-600 text-text-primary hover:from-accent-600 hover:to-accent-700 focus:ring-accent-500 shadow-lg shadow-accent-500/30',
     outline:
-      'border-2 border-violet-600 text-violet-600 hover:bg-violet-50 focus:ring-violet-500',
+      'border-2 border-primary-600 text-primary-400 hover:bg-primary-600/10 focus:ring-primary-500 hover:glow-primary',
     ghost:
-      'text-violet-600 hover:bg-violet-50 focus:ring-violet-500',
+      'text-primary-400 hover:bg-primary-600/10 focus:ring-primary-500',
     danger:
-      'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-lg shadow-red-500/30',
+      'bg-error-500 text-text-primary hover:bg-error-600 focus:ring-error-500 shadow-error hover:glow-error',
   };
   
   const sizes = {

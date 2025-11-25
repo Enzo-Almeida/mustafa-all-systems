@@ -108,10 +108,10 @@ export default function StoresManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
             Gerenciar Lojas
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-text-secondary mt-2">
             Adicione, edite ou remova lojas do sistema
           </p>
         </div>
@@ -123,7 +123,7 @@ export default function StoresManagement() {
       {/* Lista de Lojas */}
       {isLoading ? (
         <div className="flex items-center justify-center h-96">
-          <div className="w-12 h-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -132,9 +132,9 @@ export default function StoresManagement() {
               <CardContent>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{store.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{store.address}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <h3 className="text-lg font-semibold text-text-primary mb-1">{store.name}</h3>
+                    <p className="text-sm text-text-secondary mb-2">{store.address}</p>
+                    <div className="flex items-center gap-2 text-xs text-text-tertiary">
                       <span>📍 {store.latitude.toFixed(4)}, {store.longitude.toFixed(4)}</span>
                     </div>
                   </div>
@@ -163,10 +163,10 @@ export default function StoresManagement() {
           {stores.length === 0 && (
             <div className="col-span-full text-center py-12">
               <div className="text-6xl mb-4">🏪</div>
-              <p className="text-lg font-semibold text-gray-900 mb-2">
+              <p className="text-lg font-semibold text-text-primary mb-2">
                 Nenhuma loja cadastrada
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-text-tertiary mb-4">
                 Comece adicionando sua primeira loja
               </p>
               <Button variant="primary" onClick={() => handleOpenModal()}>
@@ -182,7 +182,7 @@ export default function StoresManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-text-primary">
                 {editingStore ? 'Editar Loja' : 'Adicionar Nova Loja'}
               </h2>
             </CardHeader>

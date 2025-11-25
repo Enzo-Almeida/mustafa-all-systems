@@ -117,10 +117,10 @@ export default function RouteConfig() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
           Configurar Rotas
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-text-secondary mt-2">
           Defina quais lojas cada promotor deve visitar. O número de lojas é a seu critério.
         </p>
       </div>
@@ -131,13 +131,13 @@ export default function RouteConfig() {
           {/* Seleção de Promotor */}
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold text-gray-900">Selecionar Promotor</h2>
+              <h2 className="text-xl font-semibold text-text-primary">Selecionar Promotor</h2>
             </CardHeader>
             <CardContent>
               <select
                 value={selectedPromoter}
                 onChange={(e) => setSelectedPromoter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+                className="w-full px-4 py-2.5 border border-dark-border bg-dark-cardElevated text-text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:glow-primary transition-all"
               >
                 <option value="">Selecione um promotor</option>
                 {promoters.map((promoter: Promoter) => (
@@ -148,14 +148,14 @@ export default function RouteConfig() {
               </select>
 
               {selectedPromoterData && (
-                <div className="mt-4 p-4 bg-violet-50 rounded-lg border border-violet-200">
+                <div className="mt-4 p-4 bg-primary-600/20 rounded-lg border border-primary-600/50">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-600 to-amber-500 flex items-center justify-center text-white font-semibold shadow-md">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-600 to-accent-500 flex items-center justify-center text-text-primary font-semibold shadow-primary">
                       {selectedPromoterData.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">{selectedPromoterData.name}</p>
-                      <p className="text-sm text-gray-600">{selectedPromoterData.email}</p>
+                      <p className="font-semibold text-text-primary">{selectedPromoterData.name}</p>
+                      <p className="text-sm text-text-secondary">{selectedPromoterData.email}</p>
                     </div>
                   </div>
                 </div>
@@ -168,7 +168,7 @@ export default function RouteConfig() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-gray-900">Selecionar Lojas</h2>
+                  <h2 className="text-xl font-semibold text-text-primary">Selecionar Lojas</h2>
                   {selectedStores.length > 0 && (
                     <Badge variant="primary" size="lg">
                       {selectedStores.length} loja{selectedStores.length !== 1 ? 's' : ''} selecionada{selectedStores.length !== 1 ? 's' : ''}
@@ -198,12 +198,12 @@ export default function RouteConfig() {
                 {/* Lista de Lojas */}
                 {loadingStores ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {filteredStores.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-text-tertiary">
                         {searchTerm ? 'Nenhuma loja encontrada' : 'Nenhuma loja disponível'}
                       </div>
                     ) : (
@@ -217,8 +217,8 @@ export default function RouteConfig() {
                             onClick={() => handleStoreToggle(store.id)}
                             className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                               isSelected
-                                ? 'border-violet-500 bg-violet-50 shadow-md'
-                                : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
+                                ? 'border-primary-600 bg-primary-600/20 shadow-primary'
+                                : 'border-dark-border hover:border-primary-600 hover:bg-dark-card'
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -226,8 +226,8 @@ export default function RouteConfig() {
                                 <div
                                   className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                                     isSelected
-                                      ? 'border-violet-600 bg-violet-600'
-                                      : 'border-gray-300'
+                                      ? 'border-primary-600 bg-primary-600'
+                                      : 'border-dark-border'
                                   }`}
                                 >
                                   {isSelected && (
@@ -248,14 +248,14 @@ export default function RouteConfig() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-gray-900">{store.name}</p>
+                                    <p className="font-semibold text-text-primary">{store.name}</p>
                                     {isSelected && (
                                       <Badge variant="accent" size="sm">
                                         #{order}
                                       </Badge>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-600 truncate">{store.address}</p>
+                                  <p className="text-sm text-text-secondary truncate">{store.address}</p>
                                 </div>
                               </div>
                             </div>
@@ -276,22 +276,22 @@ export default function RouteConfig() {
           {selectedPromoter && (
             <Card gradient="primary">
               <CardHeader>
-                <h2 className="text-xl font-semibold text-gray-900">Resumo da Rota</h2>
+                <h2 className="text-xl font-semibold text-text-primary">Resumo da Rota</h2>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Promotor</p>
-                    <p className="font-semibold text-gray-900">{selectedPromoterData?.name}</p>
+                    <p className="text-sm text-text-secondary mb-1">Promotor</p>
+                    <p className="font-semibold text-text-primary">{selectedPromoterData?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Total de Lojas</p>
-                    <p className="text-3xl font-bold text-violet-600">{selectedStores.length}</p>
+                    <p className="text-sm text-text-secondary mb-1">Total de Lojas</p>
+                    <p className="text-3xl font-bold text-primary-400">{selectedStores.length}</p>
                   </div>
                   {currentRoute?.route && currentRoute.route.length > 0 && (
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600 mb-2">Rota Atual</p>
-                      <p className="text-sm font-medium text-gray-900">
+                    <div className="pt-4 border-t border-dark-200">
+                      <p className="text-sm text-text-secondary mb-2">Rota Atual</p>
+                      <p className="text-sm font-medium text-text-primary">
                         {currentRoute.route.length} loja{currentRoute.route.length !== 1 ? 's' : ''} configurada{currentRoute.route.length !== 1 ? 's' : ''}
                       </p>
                     </div>
@@ -345,8 +345,8 @@ export default function RouteConfig() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">Dica</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm font-medium text-text-primary mb-1">Dica</p>
+                  <p className="text-sm text-text-secondary">
                     O promotor só verá as lojas que você configurar aqui. Você pode definir quantas
                     lojas quiser para cada promotor.
                   </p>

@@ -34,8 +34,9 @@ export async function downloadExport(req: AuthRequest, res: Response) {
 
     const filters = exportJob.filters as any;
     const startDate = new Date(filters.startDate);
+    startDate.setHours(0, 0, 0, 0); // Início do dia
     const endDate = new Date(filters.endDate);
-    endDate.setHours(23, 59, 59, 999);
+    endDate.setHours(23, 59, 59, 999); // Fim do dia
 
     let buffer: Buffer | string;
     let contentType: string;

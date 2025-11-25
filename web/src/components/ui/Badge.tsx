@@ -16,12 +16,12 @@ export default function Badge({
   const baseStyles = 'inline-flex items-center font-medium rounded-full';
   
   const variants = {
-    primary: 'bg-violet-100 text-violet-700',
-    accent: 'bg-amber-100 text-amber-700',
-    success: 'bg-green-100 text-green-700',
-    warning: 'bg-yellow-100 text-yellow-700',
-    error: 'bg-red-100 text-red-700',
-    gray: 'bg-gray-100 text-gray-700',
+    primary: 'bg-primary-600/20 text-primary-400 border border-primary-600',
+    accent: 'bg-accent-500/20 text-accent-400 border border-accent-500',
+    success: 'bg-success-500/20 text-success-500 border border-success-500',
+    warning: 'bg-warning-500/20 text-warning-500 border border-warning-500',
+    error: 'bg-error-500/20 text-error-500 border border-error-500',
+    gray: 'bg-gray-700/40 text-text-secondary border border-gray-600',
   };
   
   const sizes = {

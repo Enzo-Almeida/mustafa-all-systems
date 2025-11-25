@@ -44,6 +44,7 @@ export default function CheckoutScreen({ route }: any) {
   const [showPreview, setShowPreview] = useState(false);
   const [checkInTime, setCheckInTime] = useState<Date | null>(null);
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     requestLocationPermission();
@@ -55,11 +56,13 @@ export default function CheckoutScreen({ route }: any) {
 
   async function requestLocationPermission() {
     try {
+      setLocationLoading(true);
       const permission = await requestForegroundPermissions();
       
       if (permission.status === 'granted') {
         const loc = await getCurrentPosition();
         setLocation(loc);
+        console.log('📍 [Checkout] Localização obtida:', loc.coords);
       } else {
         Alert.alert(
           'Permissão necessária',
@@ -71,8 +74,43 @@ export default function CheckoutScreen({ route }: any) {
         );
       }
     } catch (error: any) {
-      console.error('Erro ao solicitar permissão de localização:', error);
+      console.error('❌ [Checkout] Erro ao solicitar permissão de localização:', error);
       Alert.alert('Erro', error?.message || 'Não foi possível solicitar permissão de localização');
+    } finally {
+      setLocationLoading(false);
+    }
+  }
+
+  // Função para atualizar localização (pode ser chamada a qualquer momento)
+  async function updateLocation(): Promise<LocationObject | null> {
+    try {
+      setLocationLoading(true);
+      console.log('📍 [Checkout] Atualizando localização...');
+      
+      // Verificar permissão primeiro
+      const permission = await requestForegroundPermissions();
+      
+      if (permission.status !== 'granted') {
+        console.warn('⚠️ [Checkout] Permissão de localização não concedida');
+        setLocationLoading(false);
+        return null;
+      }
+
+      // Obter localização atualizada
+      const loc = await getCurrentPosition({
+        accuracy: 6, // Alta precisão
+        maximumAge: 10000, // Aceitar localização com até 10 segundos
+        timeout: 15000, // Timeout de 15 segundos
+      });
+      
+      setLocation(loc);
+      console.log('✅ [Checkout] Localização atualizada:', loc.coords);
+      setLocationLoading(false);
+      return loc;
+    } catch (error: any) {
+      console.error('❌ [Checkout] Erro ao atualizar localização:', error);
+      setLocationLoading(false);
+      return null;
     }
   }
 
@@ -106,9 +144,13 @@ export default function CheckoutScreen({ route }: any) {
       if (!result.canceled && result.assets[0]) {
         setPhotoUri(result.assets[0].uri);
         setShowPreview(true);
+        
+        // Atualizar localização após tirar a foto
+        console.log('📸 [Checkout] Foto capturada, atualizando localização...');
+        await updateLocation();
       }
     } catch (error) {
-      console.error('Erro ao capturar foto:', error);
+      console.error('❌ [Checkout] Erro ao capturar foto:', error);
       Alert.alert('Erro', 'Não foi possível capturar a foto');
     }
   }
@@ -119,19 +161,52 @@ export default function CheckoutScreen({ route }: any) {
       return;
     }
 
-    if (!location) {
-      Alert.alert('Erro', 'Não foi possível obter a localização');
-      return;
-    }
-
     if (!photoUri) {
       Alert.alert('Erro', 'Tire uma foto da fachada primeiro');
       return;
     }
 
+    // Tentar obter localização se não estiver disponível
+    let currentLocation = location;
+    if (!currentLocation) {
+      console.log('📍 [Checkout] Localização não disponível, tentando obter...');
+      const updatedLocation = await updateLocation();
+      if (!updatedLocation) {
+        Alert.alert(
+          'Localização necessária',
+          'Não foi possível obter a localização. Por favor, verifique as permissões e tente novamente.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Tentar novamente', onPress: async () => {
+              const retryLocation = await updateLocation();
+              if (retryLocation) {
+                // Tentar novamente se conseguir localização
+                handleCheckout();
+              }
+            }},
+          ]
+        );
+        setLoading(false);
+        return;
+      }
+      currentLocation = updatedLocation;
+    }
+
+    if (!currentLocation) {
+      Alert.alert('Erro', 'Não foi possível obter a localização');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
+      console.log('📸 [Checkout] Iniciando processo de checkout...');
+      console.log('📸 [Checkout] Visit ID:', visit.id);
+      console.log('📸 [Checkout] Location:', currentLocation.coords);
+      console.log('📸 [Checkout] Photo URI:', photoUri);
+
       // 1. Obter presigned URL para upload da foto
+      console.log('📸 [Checkout] Obtendo presigned URL...');
       const { presignedUrl, url } = await photoService.getPresignedUrl({
         visitId: visit.id,
         type: 'FACADE_CHECKOUT',
@@ -139,48 +214,40 @@ export default function CheckoutScreen({ route }: any) {
         extension: 'jpg',
       });
 
+      console.log('📸 [Checkout] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
+      console.log('📸 [Checkout] URL final:', url);
+
       // 2. Upload da foto para S3
       if (photoUri && presignedUrl) {
         try {
-          const fileInfo = await FileSystem.getInfoAsync(photoUri);
-          if (fileInfo.exists) {
-            const fileUri = photoUri.startsWith('file://') ? photoUri : `file://${photoUri}`;
-            const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            
-            const byteCharacters = atob(fileContent);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: 'image/jpeg' });
-            
-            const uploadResponse = await fetch(presignedUrl, {
-              method: 'PUT',
-              body: blob,
-              headers: {
-                'Content-Type': 'image/jpeg',
-              },
-            });
-            
-            if (!uploadResponse.ok) {
-              console.warn('Upload da foto falhou, mas continuando...');
-            }
+          console.log('📸 [Checkout] Fazendo upload da foto...');
+          const uploadSuccess = await photoService.uploadToS3(presignedUrl, photoUri, 'image/jpeg');
+          
+          if (!uploadSuccess) {
+            console.warn('⚠️ [Checkout] Upload da foto falhou, mas continuando com checkout...');
+          } else {
+            console.log('✅ [Checkout] Upload da foto concluído com sucesso');
           }
-        } catch (uploadError) {
-          console.warn('Erro no upload da foto, continuando sem foto:', uploadError);
+        } catch (uploadError: any) {
+          console.error('❌ [Checkout] Erro no upload da foto:', uploadError);
+          console.error('❌ [Checkout] Mensagem:', uploadError?.message);
+          // Continuar mesmo se o upload falhar
+          console.warn('⚠️ [Checkout] Continuando checkout sem confirmação de upload...');
         }
+      } else {
+        console.warn('⚠️ [Checkout] Presigned URL ou photoUri não disponível');
       }
 
       // 3. Fazer checkout
+      console.log('📸 [Checkout] Enviando requisição de checkout...');
       const result = await visitService.checkOut({
         visitId: visit.id,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
         photoUrl: url,
       });
+
+      console.log('✅ [Checkout] Checkout realizado com sucesso:', result);
 
       const hoursWorked = result.visit?.hoursWorked || '0.00';
       Alert.alert(
@@ -196,8 +263,19 @@ export default function CheckoutScreen({ route }: any) {
         ]
       );
     } catch (error: any) {
-      console.error('Erro no checkout:', error);
-      Alert.alert('Erro', error.response?.data?.message || 'Erro ao fazer checkout');
+      console.error('❌ [Checkout] Erro no checkout:', error);
+      console.error('❌ [Checkout] Tipo do erro:', error?.constructor?.name);
+      console.error('❌ [Checkout] Mensagem:', error?.message);
+      console.error('❌ [Checkout] Response:', error?.response?.data);
+      console.error('❌ [Checkout] Status:', error?.response?.status);
+      console.error('❌ [Checkout] Stack:', error?.stack);
+      
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Erro ao fazer checkout. Verifique sua conexão e tente novamente.';
+      
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -352,7 +430,7 @@ export default function CheckoutScreen({ route }: any) {
             <View style={styles.statusInfo}>
               <Text style={styles.statusLabel}>Localização</Text>
               <Text style={styles.statusValue}>
-                {location ? 'Obtida' : 'Obtendo...'}
+                {locationLoading ? 'Obtendo...' : location ? 'Obtida' : 'Pendente'}
               </Text>
             </View>
           </View>

@@ -31,32 +31,20 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-white to-amber-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-2xl shadow-2xl border border-gray-100 animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center bg-dark-background bg-gradient-to-br from-dark-background via-dark-backgroundSecondary to-dark-background">
+      <div className="max-w-md w-full space-y-8 p-8 bg-dark-card rounded-2xl shadow-card-elevated border border-dark-border animate-scale-in glow-primary">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-amber-500 mb-4 shadow-lg">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-dark-cardElevated border-2 border-primary-600 mb-4 shadow-primary p-4">
+            <img src="/logo.png" alt="Promo Gestão" className="w-full h-full object-contain" />
           </div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold text-text-primary">
             Promo Gestão
           </h2>
-          <p className="mt-2 text-sm text-gray-600">Dashboard Supervisor</p>
+          <p className="mt-2 text-sm text-text-secondary">Dashboard Supervisor</p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2 animate-slide-down">
+            <div className="bg-error-500/20 border-l-4 border-error-500 text-error-500 px-4 py-3 rounded-lg flex items-center gap-2 animate-slide-down">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -69,27 +57,27 @@ export default function Login() {
             </div>
           )}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-1.5">
               Email
             </label>
             <input
               id="email"
               type="email"
               required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+              className="w-full px-4 py-2.5 border border-dark-border bg-dark-cardElevated text-text-primary placeholder-text-tertiary rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:glow-primary transition-all"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-1.5">
               Senha
             </label>
             <input
               id="password"
               type="password"
               required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+              className="w-full px-4 py-2.5 border border-dark-border bg-dark-cardElevated text-text-primary placeholder-text-tertiary rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 focus:glow-primary transition-all"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -97,7 +85,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-lg shadow-lg text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-lg shadow-primary text-sm font-semibold text-text-primary bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] glow-primary-hover"
           >
             {loading ? (
               <>

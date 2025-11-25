@@ -91,10 +91,10 @@ export default function Reports() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
           Relatórios
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-text-secondary mt-2">
           Gere relatórios detalhados e exporte em diferentes formatos
         </p>
       </div>
@@ -102,8 +102,8 @@ export default function Reports() {
       {/* Card de Exportação */}
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-semibold text-gray-900">Exportar Relatório</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-xl font-semibold text-text-primary">Exportar Relatório</h2>
+          <p className="text-sm text-text-tertiary mt-1">
             Selecione o período e formato para gerar o relatório
           </p>
         </CardHeader>
@@ -126,13 +126,13 @@ export default function Reports() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-text-700 mb-1.5">
                 Formato de Exportação
               </label>
               <select
                 value={exportFormat}
                 onChange={(e) => setExportFormat(e.target.value as any)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+                className="w-full px-4 py-2.5 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition-all"
               >
                 {formatOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -170,7 +170,7 @@ export default function Reports() {
                           : 'warning'
                       }
                       size="md"
-                      className="bg-white/20 text-white border-0"
+                      className="bg-dark-card/20 text-white border-0"
                     >
                       {exportStatus.status === 'completed'
                         ? 'Concluído'
@@ -193,9 +193,9 @@ export default function Reports() {
                       <span className="text-violet-100 text-sm">Progresso</span>
                       <span className="text-white font-semibold">{exportStatus.progress}%</span>
                     </div>
-                    <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-dark-card/20 rounded-full h-3 overflow-hidden">
                       <div
-                        className="bg-white h-3 rounded-full transition-all duration-300"
+                        className="bg-dark-card h-3 rounded-full transition-all duration-300"
                         style={{ width: `${exportStatus.progress || 0}%` }}
                       />
                     </div>
@@ -219,8 +219,8 @@ export default function Reports() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Lojas sem Fotos Adicionais</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-xl font-semibold text-text-primary">Lojas sem Fotos Adicionais</h2>
+              <p className="text-sm text-text-tertiary mt-1">
                 Visitas com apenas fotos de check-in/checkout (sem fotos adicionais)
               </p>
             </div>
@@ -241,35 +241,35 @@ export default function Reports() {
               {!missingPhotos?.missingPhotos || missingPhotos.missingPhotos.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">✅</div>
-                  <p className="text-lg font-semibold text-gray-900 mb-2">
+                  <p className="text-lg font-semibold text-text-primary mb-2">
                     Nenhuma visita com fotos faltantes
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-text-tertiary">
                     Todas as visitas têm fotos adicionais no período selecionado
                   </p>
                 </div>
               ) : (
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-dark-backgroundSecondary">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
                         Promotor
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
                         Loja
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
                         Data
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
                         Fotos
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
                         Esperado
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-dark-card divide-y divide-gray-200">
                     {missingPhotos.missingPhotos.map((item: any) => (
                       <tr
                         key={item.visitId}
@@ -277,23 +277,23 @@ export default function Reports() {
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-amber-500 flex items-center justify-center text-white font-semibold shadow-md mr-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-accent-500 flex items-center justify-center text-white font-semibold shadow-md mr-3">
                               {item.promoter?.name?.charAt(0).toUpperCase() || 'P'}
                             </div>
-                            <span className="text-sm font-medium text-gray-900">
+                            <span className="text-sm font-medium text-text-primary">
                               {item.promoter?.name || '-'}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-text-primary">
                               {item.store?.name || '-'}
                             </p>
-                            <p className="text-xs text-gray-500">{item.store?.address || ''}</p>
+                            <p className="text-xs text-text-tertiary">{item.store?.address || ''}</p>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-tertiary">
                           {format(new Date(item.checkInAt), 'dd/MM/yyyy HH:mm')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -304,7 +304,7 @@ export default function Reports() {
                             {item.photoCount || 0}
                           </Badge>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary font-medium">
                           {item.expectedPhotos || 3}
                         </td>
                       </tr>

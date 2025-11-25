@@ -54,10 +54,10 @@ export default function Settings() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-amber-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent">
           Configurações
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-text-secondary mt-2">
           Gerencie as configurações do sistema e dos promotores
         </p>
       </div>
@@ -65,21 +65,21 @@ export default function Settings() {
       {/* Configurar Quota de Fotos */}
       <Card>
         <CardHeader>
-          <h2 className="text-xl font-semibold text-gray-900">Configurar Quota de Fotos</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-xl font-semibold text-text-primary">Configurar Quota de Fotos</h2>
+          <p className="text-sm text-text-tertiary mt-1">
             Defina a quantidade esperada de fotos por visita para cada promotor
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-text-700 mb-1.5">
                 Promotor
               </label>
               <select
                 value={selectedPromoter}
                 onChange={(e) => setSelectedPromoter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all"
+                className="w-full px-4 py-2.5 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition-all"
               >
                 <option value="">Selecione um promotor</option>
                 {promoters.map((promoter: any) => (
@@ -104,17 +104,17 @@ export default function Settings() {
             <Card gradient="primary" className="mb-6">
               <CardContent>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold">
+                  <div className="w-12 h-12 rounded-full bg-dark-card/20 flex items-center justify-center text-white font-semibold">
                     {selectedPromoterData.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="font-semibold text-white">{selectedPromoterData.name}</p>
-                    <p className="text-violet-100 text-sm">{selectedPromoterData.email}</p>
+                    <p className="text-primary-400 text-sm">{selectedPromoterData.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-violet-100 text-sm">Quota atual:</span>
-                  <Badge variant="accent" size="md" className="bg-white/20 text-white border-0">
+                  <span className="text-primary-400 text-sm">Quota atual:</span>
+                  <Badge variant="accent" size="md" className="bg-dark-card/20 text-white border-0">
                     {expectedPhotos} fotos
                   </Badge>
                 </div>
@@ -142,12 +142,12 @@ export default function Settings() {
             <h3 className="text-lg font-semibold text-white mb-4">Sistema</h3>
             <div className="space-y-3">
               <div>
-                <p className="text-violet-100 text-sm mb-1">Versão</p>
+                <p className="text-primary-400 text-sm mb-1">Versão</p>
                 <p className="text-white font-semibold">1.0.0</p>
               </div>
               <div>
-                <p className="text-violet-100 text-sm mb-1">Status</p>
-                <Badge variant="success" size="sm" className="bg-white/20 text-white border-0">
+                <p className="text-primary-400 text-sm mb-1">Status</p>
+                <Badge variant="success" size="sm" className="bg-dark-card/20 text-white border-0">
                   Operacional
                 </Badge>
               </div>
@@ -165,7 +165,7 @@ export default function Settings() {
               </div>
               <div>
                 <p className="text-amber-100 text-sm mb-1">Sistema Ativo</p>
-                <Badge variant="success" size="sm" className="bg-white/20 text-white border-0">
+                <Badge variant="success" size="sm" className="bg-dark-card/20 text-white border-0">
                   Online
                 </Badge>
               </div>

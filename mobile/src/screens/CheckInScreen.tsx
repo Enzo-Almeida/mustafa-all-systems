@@ -10,7 +10,6 @@ import {
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { visitService } from '../services/visitService';
 import { photoService } from '../services/photoService';
@@ -125,56 +124,61 @@ export default function CheckInScreen({ route }: any) {
 
     setLoading(true);
     try {
-      // 1. Obter presigned URL para upload da foto
+      console.log('📸 [CheckIn] Iniciando processo de check-in...');
+      console.log('📸 [CheckIn] Store ID:', store.id);
+      console.log('📸 [CheckIn] Location:', location.coords);
+      console.log('📸 [CheckIn] Photo URI:', photoUri);
+
+      // 1. Fazer check-in primeiro com URL temporária para obter visitId
+      console.log('📸 [CheckIn] Fazendo check-in inicial (sem foto)...');
+      const tempPhotoUrl = 'https://placeholder.com/checkin.jpg'; // URL temporária
+      
+      const checkInResult = await visitService.checkIn({
+        storeId: store.id,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        photoUrl: tempPhotoUrl,
+      });
+
+      console.log('✅ [CheckIn] Check-in criado, visitId:', checkInResult.visit?.id);
+
+      // 2. Agora que temos o visitId, obter presigned URL e fazer upload da foto
+      if (photoUri && checkInResult.visit?.id) {
+        try {
+          console.log('📸 [CheckIn] Obtendo presigned URL com visitId real...');
       const { presignedUrl, url } = await photoService.getPresignedUrl({
-        visitId: 'temp',
+            visitId: checkInResult.visit.id,
         type: 'FACADE_CHECKIN',
         contentType: 'image/jpeg',
         extension: 'jpg',
       });
 
-      // 2. Upload da foto para S3
-      if (photoUri && presignedUrl) {
-        try {
-          const fileInfo = await FileSystem.getInfoAsync(photoUri);
-          if (fileInfo.exists) {
-            const fileUri = photoUri.startsWith('file://') ? photoUri : `file://${photoUri}`;
-            const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            
-            const byteCharacters = atob(fileContent);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: 'image/jpeg' });
-            
-            const uploadResponse = await fetch(presignedUrl, {
-              method: 'PUT',
-              body: blob,
-              headers: {
-                'Content-Type': 'image/jpeg',
-              },
-            });
-            
-            if (!uploadResponse.ok) {
-              console.warn('Upload da foto falhou, mas continuando...');
-            }
+          console.log('📸 [CheckIn] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
+          console.log('📸 [CheckIn] URL final:', url);
+
+          // 3. Upload da foto para S3
+          console.log('📸 [CheckIn] Fazendo upload da foto...');
+          const uploadSuccess = await photoService.uploadToS3(presignedUrl, photoUri, 'image/jpeg');
+          
+          if (uploadSuccess) {
+            console.log('✅ [CheckIn] Upload da foto concluído com sucesso');
+            // TODO: Atualizar a visita com a URL correta da foto
+            // Por enquanto, a foto já está no S3 e o registro foi criado pelo backend
+          } else {
+            console.warn('⚠️ [CheckIn] Upload da foto falhou');
           }
-        } catch (uploadError) {
-          console.warn('Erro no upload da foto, continuando sem foto:', uploadError);
+        } catch (uploadError: any) {
+          console.error('❌ [CheckIn] Erro no upload da foto:', uploadError);
+          console.error('❌ [CheckIn] Mensagem:', uploadError?.message);
+          // Continuar mesmo se o upload falhar - o check-in já foi criado
+          console.warn('⚠️ [CheckIn] Check-in criado, mas upload da foto falhou');
         }
+      } else {
+        console.warn('⚠️ [CheckIn] PhotoUri ou visitId não disponível para upload');
       }
 
-      // 3. Fazer check-in
-      const result = await visitService.checkIn({
-        storeId: store.id,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        photoUrl: url,
-      });
+      const result = checkInResult;
+      console.log('✅ [CheckIn] Check-in realizado com sucesso:', result);
 
       Alert.alert('✅ Sucesso', 'Check-in realizado com sucesso!', [
         {
@@ -185,8 +189,19 @@ export default function CheckInScreen({ route }: any) {
         },
       ]);
     } catch (error: any) {
-      console.error('Erro no check-in:', error);
-      Alert.alert('Erro', error.response?.data?.message || error.message || 'Erro ao fazer check-in');
+      console.error('❌ [CheckIn] Erro no check-in:', error);
+      console.error('❌ [CheckIn] Tipo do erro:', error?.constructor?.name);
+      console.error('❌ [CheckIn] Mensagem:', error?.message);
+      console.error('❌ [CheckIn] Response:', error?.response?.data);
+      console.error('❌ [CheckIn] Status:', error?.response?.status);
+      console.error('❌ [CheckIn] Stack:', error?.stack);
+      
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        'Erro ao fazer check-in. Verifique sua conexão e tente novamente.';
+      
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }

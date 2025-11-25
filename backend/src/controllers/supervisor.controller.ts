@@ -116,9 +116,19 @@ export async function getPromoterPerformance(req: AuthRequest, res: Response) {
     const { id } = req.params;
     const { startDate, endDate } = req.query;
 
+    // Configurar data inicial (início do dia)
     const start = startDate ? new Date(startDate as string) : new Date();
-    start.setDate(start.getDate() - 30); // Últimos 30 dias por padrão
+    if (startDate) {
+      start.setHours(0, 0, 0, 0); // Início do dia
+    } else {
+      start.setDate(start.getDate() - 30); // Últimos 30 dias por padrão
+    }
+    
+    // Configurar data final (fim do dia)
     const end = endDate ? new Date(endDate as string) : new Date();
+    if (endDate) {
+      end.setHours(23, 59, 59, 999); // Fim do dia para incluir todo o dia selecionado
+    }
 
     // Verificar se o promotor existe
     const promoter = await prisma.user.findUnique({
@@ -370,9 +380,19 @@ export async function getMissingPhotos(req: AuthRequest, res: Response) {
   try {
     const { promoterId, startDate, endDate } = req.query;
 
+    // Configurar data inicial (início do dia)
     const start = startDate ? new Date(startDate as string) : new Date();
-    start.setDate(start.getDate() - 30);
+    if (startDate) {
+      start.setHours(0, 0, 0, 0); // Início do dia
+    } else {
+      start.setDate(start.getDate() - 30);
+    }
+    
+    // Configurar data final (fim do dia)
     const end = endDate ? new Date(endDate as string) : new Date();
+    if (endDate) {
+      end.setHours(23, 59, 59, 999); // Fim do dia para incluir todo o dia selecionado
+    }
 
     // Buscar visitas sem fotos adicionais (apenas check-in/checkout)
     const visits = await prisma.visit.findMany({
@@ -483,6 +503,7 @@ export async function exportReport(req: AuthRequest, res: Response) {
     const userId = req.userId!;
 
     const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0); // Início do dia
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999); // Fim do dia
 
