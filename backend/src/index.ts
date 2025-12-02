@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.routes';
 import promoterRoutes from './routes/promoter.routes';
 import supervisorRoutes from './routes/supervisor.routes';
 import uploadRoutes from './routes/upload.routes';
+import adminRoutes from './routes/admin.routes';
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/promoters', promoterRoutes);
 app.use('/api/supervisors', supervisorRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/admin', adminRoutes); // ⚠️ TEMPORÁRIO: Remover em produção
 
 // Health check
 app.get('/health', (req, res) => {
