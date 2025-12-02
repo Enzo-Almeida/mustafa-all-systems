@@ -291,7 +291,7 @@ export async function getStores(req: AuthRequest, res: Response) {
     // Se o promotor tem rota configurada, retornar apenas essas lojas
     if (routeAssignments.length > 0) {
       return res.json({
-        stores: routeAssignments.map((a) => a.store),
+        stores: routeAssignments.map((a: { store: any }) => a.store),
         hasRoute: true,
       });
     }
@@ -386,7 +386,7 @@ export async function getVisits(req: AuthRequest, res: Response) {
     ]);
 
     res.json({
-      visits: visits.map((visit) => ({
+      visits: visits.map((visit: any) => ({
         id: visit.id,
         store: visit.store,
         checkInAt: visit.checkInAt,

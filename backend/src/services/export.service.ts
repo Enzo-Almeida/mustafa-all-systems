@@ -83,7 +83,7 @@ export async function generatePowerPointReport(options: ExportOptions): Promise<
   });
 
   // Agrupar fotos por visita
-  const visitsWithPhotos = visits.filter((visit) => visit.photos.length > 0);
+  const visitsWithPhotos = visits.filter((visit: any) => visit.photos.length > 0);
 
   // Criar slides com fotos (2x2 grid)
   for (const visit of visitsWithPhotos) {
@@ -157,7 +157,7 @@ export async function generatePowerPointReport(options: ExportOptions): Promise<
           };
 
           slide.addText(
-            `${photoTypeLabels[photo.type] || 'Foto'}\n${photo.latitude ? `${photo.latitude.toFixed(6)}, ${photo.longitude?.toFixed(6)}` : 'Sem GPS'}\n${new Date(photo.createdAt).toLocaleString('pt-BR')}`,
+            `${(photoTypeLabels as Record<string, string>)[photo.type] || 'Foto'}\n${photo.latitude ? `${photo.latitude.toFixed(6)}, ${photo.longitude?.toFixed(6)}` : 'Sem GPS'}\n${new Date(photo.createdAt).toLocaleString('pt-BR')}`,
             {
               x: pos.x,
               y: pos.y + pos.h + 0.1,

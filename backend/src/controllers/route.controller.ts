@@ -123,7 +123,7 @@ export async function getPromoterRoute(req: AuthRequest, res: Response) {
         name: promoter.name,
         email: promoter.email,
       },
-      route: assignments.map((a) => ({
+      route: assignments.map((a: any) => ({
         id: a.id,
         store: {
           id: a.store.id,
@@ -161,13 +161,13 @@ export async function getAllRoutes(req: AuthRequest, res: Response) {
       },
     });
 
-    const routes = promoters.map((promoter) => ({
+    const routes = promoters.map((promoter: any) => ({
       promoter: {
         id: promoter.id,
         name: promoter.name,
         email: promoter.email,
       },
-      stores: promoter.routeAssignments.map((a) => ({
+      stores: promoter.routeAssignments.map((a: any) => ({
         id: a.store.id,
         name: a.store.name,
         address: a.store.address,

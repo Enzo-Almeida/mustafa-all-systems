@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserRole } from '../../../shared/types';
 
 interface TokenPayload {
@@ -13,7 +13,7 @@ export function generateAccessToken(payload: TokenPayload): string {
   }
 
   const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
 }
 
 export function generateRefreshToken(payload: TokenPayload): string {
@@ -23,7 +23,7 @@ export function generateRefreshToken(payload: TokenPayload): string {
   }
 
   const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
 }
 
 export function verifyAccessToken(token: string): TokenPayload {

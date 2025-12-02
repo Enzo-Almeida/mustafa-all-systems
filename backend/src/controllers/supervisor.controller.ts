@@ -83,7 +83,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
       },
     });
 
-    const totalHoursToday = visitsWithHours.reduce((total, visit) => {
+    const totalHoursToday = visitsWithHours.reduce((total: number, visit: any) => {
       if (visit.checkOutAt) {
         const hours = (visit.checkOutAt.getTime() - visit.checkInAt.getTime()) / (1000 * 60 * 60);
         return total + hours;
@@ -100,7 +100,7 @@ export async function getDashboard(req: AuthRequest, res: Response) {
         activePromotersToday: activePromotersToday.length,
         totalHoursToday: totalHoursToday.toFixed(2),
       },
-      visitsByPromoter: visitsByPromoter.map((v) => ({
+      visitsByPromoter: visitsByPromoter.map((v: any) => ({
         promoterId: v.promoterId,
         visitCount: v._count.id,
       })),
@@ -160,10 +160,10 @@ export async function getPromoterPerformance(req: AuthRequest, res: Response) {
 
     // Calcular estatísticas
     const totalVisits = visits.length;
-    const completedVisits = visits.filter((v) => v.checkOutAt !== null).length;
+    const completedVisits = visits.filter((v: any) => v.checkOutAt !== null).length;
     const totalHours = visits
-      .filter((v) => v.checkOutAt !== null)
-      .reduce((total, visit) => {
+      .filter((v: any) => v.checkOutAt !== null)
+      .reduce((total: number, visit: any) => {
         if (visit.checkOutAt) {
           const hours = (visit.checkOutAt.getTime() - visit.checkInAt.getTime()) / (1000 * 60 * 60);
           return total + hours;
@@ -171,7 +171,7 @@ export async function getPromoterPerformance(req: AuthRequest, res: Response) {
         return total;
       }, 0);
 
-    const totalPhotos = visits.reduce((total, visit) => total + visit.photos.length, 0);
+    const totalPhotos = visits.reduce((total: number, visit: any) => total + visit.photos.length, 0);
 
     // Visitas por dia (últimos 30 dias)
     const visitsByDay = await prisma.visit.groupBy({
@@ -201,7 +201,7 @@ export async function getPromoterPerformance(req: AuthRequest, res: Response) {
         totalPhotos,
         averageHoursPerVisit: completedVisits > 0 ? (totalHours / completedVisits).toFixed(2) : '0',
       },
-      visits: visits.map((visit) => ({
+      visits: visits.map((visit: any) => ({
         id: visit.id,
         store: visit.store,
         checkInAt: visit.checkInAt,
@@ -213,7 +213,7 @@ export async function getPromoterPerformance(req: AuthRequest, res: Response) {
         checkInPhotoUrl: visit.checkInPhotoUrl,
         checkOutPhotoUrl: visit.checkOutPhotoUrl,
       })),
-      visitsByDay: visitsByDay.map((v) => ({
+      visitsByDay: visitsByDay.map((v: any) => ({
         date: v.checkInAt.toISOString().split('T')[0],
         count: v._count.id,
       })),
@@ -266,7 +266,7 @@ export async function getPromoterVisits(req: AuthRequest, res: Response) {
     ]);
 
     res.json({
-      visits: visits.map((visit) => ({
+      visits: visits.map((visit: any) => ({
         id: visit.id,
         store: visit.store,
         checkInAt: visit.checkInAt,
@@ -339,7 +339,7 @@ export async function getPromoterRoute(req: AuthRequest, res: Response) {
     });
 
     // Construir rota
-    const route = visits.map((visit) => ({
+    const route = visits.map((visit: any) => ({
       id: visit.id,
       store: visit.store,
       checkInAt: visit.checkInAt,
@@ -354,7 +354,7 @@ export async function getPromoterRoute(req: AuthRequest, res: Response) {
             longitude: visit.checkOutLongitude!,
           }
         : null,
-      locations: visit.locations.map((loc) => ({
+      locations: visit.locations.map((loc: any) => ({
         latitude: loc.latitude,
         longitude: loc.longitude,
         timestamp: loc.timestamp,
@@ -417,7 +417,7 @@ export async function getMissingPhotos(req: AuthRequest, res: Response) {
     });
 
     // Filtrar visitas com poucas fotos (apenas check-in/checkout)
-    const visitsWithMissingPhotos = visits.filter((visit) => {
+    const visitsWithMissingPhotos = visits.filter((visit: any) => {
       const photoCount = visit.photos.length;
       // Considerar que faltam fotos se tiver apenas 1 ou 2 fotos (check-in e checkout)
       return photoCount <= 2;
@@ -428,7 +428,7 @@ export async function getMissingPhotos(req: AuthRequest, res: Response) {
         start: start.toISOString(),
         end: end.toISOString(),
       },
-      missingPhotos: visitsWithMissingPhotos.map((visit) => ({
+      missingPhotos: visitsWithMissingPhotos.map((visit: any) => ({
         visitId: visit.id,
         promoter: visit.promoter,
         store: visit.store,
