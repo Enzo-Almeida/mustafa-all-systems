@@ -19,8 +19,8 @@ import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 
 // Ícones SVG
-const AlertIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+const AlertIcon = ({ className = "w-6 h-6" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -284,7 +284,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {problemKPIs.map((kpi, index) => {
           const Icon = kpi.icon;
-          const percentage = kpi.total > 0 ? ((kpi.value / kpi.total) * 100).toFixed(0) : 0;
+          const percentage = kpi.total > 0 ? Number(((kpi.value / kpi.total) * 100).toFixed(0)) : 0;
           const isCritical = kpi.urgent && kpi.value > 0;
           
           return (

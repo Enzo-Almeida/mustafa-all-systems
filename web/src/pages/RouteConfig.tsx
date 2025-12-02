@@ -331,7 +331,7 @@ export default function RouteConfig() {
           )}
 
           {/* Dica */}
-          <Card variant="accent">
+          <Card gradient="accent">
             <CardContent>
               <div className="flex items-start gap-3">
                 <div className="text-amber-600 flex-shrink-0 mt-0.5">
