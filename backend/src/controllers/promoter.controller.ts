@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../prisma/client';
-import { PhotoType } from '../../../shared/types';
+import { PhotoType } from '../types';
 
 const checkInSchema = z.object({
   storeId: z.string().uuid(),

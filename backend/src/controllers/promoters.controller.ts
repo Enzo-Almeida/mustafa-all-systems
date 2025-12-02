@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../prisma/client';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 
 export async function getPromoters(req: AuthRequest, res: Response) {
   try {

@@ -1,6 +1,6 @@
 import PptxGenJS from 'pptxgenjs';
 import prisma from '../prisma/client';
-import { PhotoType } from '../../../shared/types';
+import { PhotoType } from '../types';
 import axios from 'axios';
 
 export interface ExportOptions {

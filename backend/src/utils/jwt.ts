@@ -1,5 +1,5 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 
 interface TokenPayload {
   userId: string;

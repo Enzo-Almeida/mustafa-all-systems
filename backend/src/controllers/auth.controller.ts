@@ -3,7 +3,7 @@ import { z } from 'zod';
 import prisma from '../prisma/client';
 import { comparePassword } from '../utils/password';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 
 const loginSchema = z.object({
   email: z.string().email(),

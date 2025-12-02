@@ -1,6 +1,6 @@
 import prisma from '../prisma/client';
 import { hashPassword } from '../utils/password';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 
 async function main() {
   console.log('🌱 Seeding database...');

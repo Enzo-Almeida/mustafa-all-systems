@@ -6,7 +6,7 @@ import {
   generatePhotoKey as generateFirebaseKey,
   getPublicUrl 
 } from '../services/firebase-storage.service';
-import { PhotoType } from '../../../shared/types';
+import { PhotoType } from '../types';
 
 const presignedUrlSchema = z.object({
   visitId: z.string().uuid(),
