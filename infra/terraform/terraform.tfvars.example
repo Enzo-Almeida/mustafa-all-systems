@@ -1,0 +1,24 @@
+# Copy this file to terraform.tfvars and fill in the values
+# terraform.tfvars is in .gitignore and should not be committed
+
+aws_region = "sa-east-1"
+environment = "prod"
+project_name = "promo-gestao"
+domain_name = "mustafa.ozentech"
+
+# Database configuration
+db_instance_class = "db.t4g.small"
+db_allocated_storage = 20
+db_max_allocated_storage = 100
+db_master_username = "postgres"
+db_master_password = "CHANGE_ME_STRONG_PASSWORD"
+
+# ECS configuration
+ecs_task_cpu = 512
+ecs_task_memory = 1024
+ecs_desired_count = 2
+ecs_min_capacity = 2
+ecs_max_capacity = 10
+
+
+

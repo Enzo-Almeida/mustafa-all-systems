@@ -1,0 +1,204 @@
+name: Deploy All (Full Stack)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_infra:
+        description: 'Deploy Infrastructure'
+        required: false
+        default: false
+        type: boolean
+      deploy_backend:
+        description: 'Deploy Backend'
+        required: false
+        default: true
+        type: boolean
+      deploy_web:
+        description: 'Deploy Web Frontend'
+        required: false
+        default: true
+        type: boolean
+      run_migrations:
+        description: 'Run Database Migrations'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**'
+      - 'web/**'
+      - '.github/workflows/deploy-all.yml'
+
+env:
+  AWS_REGION: sa-east-1
+  PROJECT_NAME: promo-gestao
+  ENVIRONMENT: prod
+
+jobs:
+  deploy:
+    name: Deploy Full Stack
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        if: ${{ github.event.inputs.deploy_infra == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-infra]')) }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Deploy Infrastructure
+        if: ${{ github.event.inputs.deploy_infra == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-infra]')) }}
+        run: |
+          cd infra/terraform
+          terraform init
+          terraform validate
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
+
+      - name: Get Terraform Outputs
+        id: terraform-outputs
+        if: ${{ github.event.inputs.deploy_backend == 'true' || github.event.inputs.deploy_web == 'true' || github.event.inputs.run_migrations == 'true' }}
+        run: |
+          cd infra/terraform
+          echo "ecr_repo_url=$(terraform output -raw ecr_repository_url 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "s3_web_bucket=$(terraform output -raw s3_web_bucket 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "cloudfront_dist_id=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "rds_endpoint=$(terraform output -raw rds_endpoint 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
+          echo "api_url=$(terraform output -raw api_url 2>/dev/null || echo 'https://api.mustafa.ozentech')" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        if: ${{ github.event.inputs.deploy_backend == 'true' || github.event.inputs.deploy_web == 'true' || github.event.inputs.run_migrations == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Login to Amazon ECR
+        if: ${{ github.event.inputs.deploy_backend == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-backend]')) }}
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Backend Image
+        if: ${{ github.event.inputs.deploy_backend == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-backend]')) }}
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.PROJECT_NAME }}-backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy Backend to ECS
+        if: ${{ github.event.inputs.deploy_backend == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-backend]')) }}
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.PROJECT_NAME }}-cluster \
+            --service ${{ env.PROJECT_NAME }}-backend-service \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for ECS Service Stability
+        if: ${{ github.event.inputs.deploy_backend == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-backend]')) }}
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ env.PROJECT_NAME }}-cluster \
+            --services ${{ env.PROJECT_NAME }}-backend-service \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Run Database Migrations
+        if: ${{ github.event.inputs.run_migrations == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[migrate]')) }}
+        env:
+          RDS_ENDPOINT: ${{ steps.terraform-outputs.outputs.rds_endpoint }}
+          DB_SECRET_ARN: arn:aws:secretsmanager:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:secret:${{ env.PROJECT_NAME }}-db-credentials-${{ env.ENVIRONMENT }}
+        run: |
+          # Get DB credentials from Secrets Manager
+          DB_SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id $DB_SECRET_ARN \
+            --region ${{ env.AWS_REGION }} \
+            --query SecretString --output text)
+          
+          DB_USER=$(echo $DB_SECRET | python3 -c "import sys, json; print(json.load(sys.stdin)['username'])")
+          DB_PASS=$(echo $DB_SECRET | python3 -c "import sys, json; print(json.load(sys.stdin)['password'])")
+          DB_NAME=$(echo $DB_SECRET | python3 -c "import sys, json; print(json.load(sys.stdin)['dbname'])")
+          
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${RDS_ENDPOINT}:5432/${DB_NAME}?schema=public"
+          
+          cd backend
+          npm ci
+          DATABASE_URL="$DATABASE_URL" npx prisma migrate deploy
+
+      - name: Build Web Frontend
+        if: ${{ github.event.inputs.deploy_web == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-web]')) }}
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || steps.terraform-outputs.outputs.api_url }}/api
+        run: |
+          cd web
+          npm ci
+          npm run build
+
+      - name: Deploy Web to S3
+        if: ${{ github.event.inputs.deploy_web == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-web]')) }}
+        env:
+          S3_BUCKET: ${{ steps.terraform-outputs.outputs.s3_web_bucket }}
+        run: |
+          # Deploy static assets
+          aws s3 sync web/dist/ s3://$S3_BUCKET/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html" \
+            --exclude "*.html"
+          
+          # Deploy HTML files
+          aws s3 sync web/dist/ s3://$S3_BUCKET/ \
+            --delete \
+            --cache-control "public, max-age=0, must-revalidate" \
+            --include "index.html" \
+            --include "*.html"
+
+      - name: Invalidate CloudFront Cache
+        if: ${{ github.event.inputs.deploy_web == 'true' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-web]')) }}
+        env:
+          CLOUDFRONT_DIST_ID: ${{ steps.terraform-outputs.outputs.cloudfront_dist_id }}
+        run: |
+          if [ ! -z "$CLOUDFRONT_DIST_ID" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id $CLOUDFRONT_DIST_ID \
+              --paths "/*"
+          fi
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Deploy Concluído!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Serviços Deployados:" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.deploy_backend }}" == "true" ] || [ "${{ github.event_name }}" == "push" ]; then
+            echo "- ✅ Backend" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ github.event.inputs.deploy_web }}" == "true" ] || [ "${{ github.event_name }}" == "push" ]; then
+            echo "- ✅ Frontend Web" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ github.event.inputs.run_migrations }}" == "true" ]; then
+            echo "- ✅ Migrações do Banco" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL**: ${{ steps.terraform-outputs.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Web URL**: https://mustafa.ozentech" >> $GITHUB_STEP_SUMMARY
+

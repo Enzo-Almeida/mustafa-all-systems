@@ -138,7 +138,9 @@ export async function checkOut(req: AuthRequest, res: Response) {
     });
 
     // Calcular horas trabalhadas
-    const hoursWorked = (updatedVisit.checkOutAt.getTime() - updatedVisit.checkInAt.getTime()) / (1000 * 60 * 60);
+    const hoursWorked = updatedVisit.checkOutAt 
+      ? (updatedVisit.checkOutAt.getTime() - updatedVisit.checkInAt.getTime()) / (1000 * 60 * 60)
+      : 0;
 
     res.json({
       visit: {
