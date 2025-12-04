@@ -149,60 +149,127 @@ export default function ActiveVisitScreen({ route }: any) {
       // Obter localização atual
       const location = await getCurrentPosition();
 
-      // Upload de cada foto
-      const uploadPromises = photos
-        .filter((photo) => photo.uri?.startsWith('file://'))
-        .map(async (photo) => {
-          try {
-            console.log('📸 [ActiveVisit] Iniciando upload de foto adicional...');
-            
-            // Obter presigned URL
-            const { presignedUrl, url } = await photoService.getPresignedUrl({
-              visitId: visit.id,
-              type: photo.type || 'OTHER',
-              contentType: 'image/jpeg',
-              extension: 'jpg',
-            });
-
-            console.log('📸 [ActiveVisit] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
-            console.log('📸 [ActiveVisit] URL final:', url);
-
-            // Fazer upload para Firebase Storage
-            if (presignedUrl && photo.uri) {
-              console.log('📸 [ActiveVisit] Fazendo upload da foto...');
-              const uploadSuccess = await photoService.uploadToS3(presignedUrl, photo.uri, 'image/jpeg');
-              
-              if (!uploadSuccess) {
-                console.error('❌ [ActiveVisit] Upload da foto falhou');
-                throw new Error('Falha no upload da foto');
-              }
-              
-              console.log('✅ [ActiveVisit] Upload da foto concluído com sucesso');
-            } else {
-              console.warn('⚠️ [ActiveVisit] Presigned URL ou photoUri não disponível');
-            }
-
-            return {
-              url,
-              type: photo.type || 'OTHER',
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            };
-          } catch (error: any) {
-            console.error('❌ [ActiveVisit] Erro no upload da foto:', error);
-            throw error;
-          }
-        });
-
-      const uploadedPhotos = await Promise.all(uploadPromises);
-
-      // Registrar fotos no backend
-      await visitService.uploadPhotos({
-        visitId: visit.id,
-        photos: uploadedPhotos,
+      // Filtrar apenas fotos novas (que têm uri e ainda não foram enviadas)
+      const photosToUpload = photos.filter((photo) => {
+        const hasUri = photo.uri && photo.uri.startsWith('file://');
+        const alreadyUploaded = photo.url && !photo.uri; // Já tem URL mas não tem URI = já foi enviada
+        return hasUri && !alreadyUploaded;
       });
 
-      Alert.alert('Sucesso', 'Fotos enviadas com sucesso!');
+      console.log('📸 [ActiveVisit] Total de fotos:', photos.length);
+      console.log('📸 [ActiveVisit] Fotos para upload:', photosToUpload.length);
+      photosToUpload.forEach((photo, index) => {
+        console.log(`📸 [ActiveVisit] Foto ${index + 1}:`, {
+          hasUri: !!photo.uri,
+          uri: photo.uri?.substring(0, 50),
+          type: photo.type,
+          hasUrl: !!photo.url,
+        });
+      });
+
+      if (photosToUpload.length === 0) {
+        Alert.alert('Aviso', 'Não há fotos novas para enviar');
+        setUploading(false);
+        return;
+      }
+
+      // Upload de cada foto
+      const uploadPromises = photosToUpload.map(async (photo) => {
+        try {
+          console.log('📸 [ActiveVisit] Iniciando upload de foto adicional...');
+          console.log('📸 [ActiveVisit] Tipo:', photo.type || 'OTHER');
+          console.log('📸 [ActiveVisit] URI:', photo.uri?.substring(0, 50));
+          
+          // Obter presigned URL
+          const { presignedUrl, url } = await photoService.getPresignedUrl({
+            visitId: visit.id,
+            type: (photo.type || 'OTHER') as 'FACADE_CHECKIN' | 'FACADE_CHECKOUT' | 'OTHER',
+            contentType: 'image/jpeg',
+            extension: 'jpg',
+          });
+
+          console.log('📸 [ActiveVisit] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
+          console.log('📸 [ActiveVisit] URL final:', url);
+
+          // Fazer upload para Firebase Storage
+          if (presignedUrl && photo.uri) {
+            console.log('📸 [ActiveVisit] Fazendo upload da foto para Firebase...');
+            const uploadSuccess = await photoService.uploadToS3(presignedUrl, photo.uri, 'image/jpeg');
+            
+            if (!uploadSuccess) {
+              console.error('❌ [ActiveVisit] Upload da foto falhou');
+              throw new Error('Falha no upload da foto');
+            }
+            
+            console.log('✅ [ActiveVisit] Upload da foto concluído com sucesso');
+            console.log('✅ [ActiveVisit] URL da foto:', url);
+          } else {
+            console.warn('⚠️ [ActiveVisit] Presigned URL ou photoUri não disponível');
+            console.warn('⚠️ [ActiveVisit] presignedUrl:', !!presignedUrl, 'photo.uri:', !!photo.uri);
+            throw new Error('Presigned URL ou photoUri não disponível');
+          }
+
+          return {
+            url,
+            type: (photo.type || 'OTHER') as 'FACADE_CHECKIN' | 'FACADE_CHECKOUT' | 'OTHER',
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+        } catch (error: any) {
+          console.error('❌ [ActiveVisit] Erro no upload da foto:', error);
+          console.error('❌ [ActiveVisit] Mensagem:', error?.message);
+          console.error('❌ [ActiveVisit] Stack:', error?.stack);
+          throw error;
+        }
+      });
+
+      // Executar uploads (permitir que alguns falhem sem parar todos)
+      const uploadResults = await Promise.allSettled(uploadPromises);
+      
+      const uploadedPhotos = uploadResults
+        .filter((result) => result.status === 'fulfilled')
+        .map((result) => (result as PromiseFulfilledResult<any>).value);
+      
+      const failedUploads = uploadResults.filter((result) => result.status === 'rejected');
+      
+      if (failedUploads.length > 0) {
+        console.error('❌ [ActiveVisit] Algumas fotos falharam:', failedUploads.length);
+        failedUploads.forEach((result, index) => {
+          console.error(`❌ [ActiveVisit] Foto ${index + 1} falhou:`, (result as PromiseRejectedResult).reason);
+        });
+      }
+
+      if (uploadedPhotos.length === 0) {
+        Alert.alert('Erro', 'Nenhuma foto foi enviada com sucesso');
+        setUploading(false);
+        return;
+      }
+
+      console.log('✅ [ActiveVisit] Fotos enviadas com sucesso:', uploadedPhotos.length);
+
+      // Registrar fotos no backend
+      try {
+        await visitService.uploadPhotos({
+          visitId: visit.id,
+          photos: uploadedPhotos,
+        });
+        console.log('✅ [ActiveVisit] Fotos registradas no backend');
+      } catch (error: any) {
+        console.error('❌ [ActiveVisit] Erro ao registrar fotos no backend:', error);
+        Alert.alert('Aviso', `${uploadedPhotos.length} foto(s) foram enviadas, mas houve erro ao registrar no sistema`);
+        setUploading(false);
+        return;
+      }
+
+      if (failedUploads.length > 0) {
+        Alert.alert(
+          'Sucesso parcial',
+          `${uploadedPhotos.length} foto(s) enviadas com sucesso. ${failedUploads.length} foto(s) falharam.`
+        );
+      } else {
+        Alert.alert('Sucesso', `${uploadedPhotos.length} foto(s) enviadas com sucesso!`);
+      }
+      
       await loadCurrentVisit();
     } catch (error: any) {
       Alert.alert('Erro', error.response?.data?.message || 'Erro ao enviar fotos');

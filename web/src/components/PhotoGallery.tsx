@@ -39,23 +39,51 @@ function isValidUrl(url: any): url is string {
 // Função para normalizar URL (garantir que seja string)
 function normalizeUrl(url: any): string | null {
   if (!url) return null;
+  
+  let urlString: string | null = null;
+  
   if (typeof url === 'string') {
-    return url.trim() || null;
-  }
-  // Se for objeto, tentar extrair a propriedade url
-  if (typeof url === 'object' && url !== null) {
+    urlString = url.trim();
+  } else if (typeof url === 'object' && url !== null) {
     if ('url' in url && typeof url.url === 'string') {
-      return url.url.trim() || null;
+      urlString = url.url.trim();
+    } else {
+      try {
+        const str = String(url);
+        urlString = isValidUrl(str) ? str : null;
+      } catch {
+        return null;
+      }
     }
-    // Tentar converter para string (pode ser um objeto serializado)
-    try {
-      const str = String(url);
-      return isValidUrl(str) ? str : null;
-    } catch {
+  }
+  
+  if (!urlString || urlString === '') {
+    return null;
+  }
+  
+  // Filtrar URLs inválidas ou temporárias
+  if (urlString.includes('placeholder.com') || 
+      urlString.includes('mock-storage.local') ||
+      urlString === '' ||
+      urlString.trim() === '') {
+    return null;
+  }
+  
+  // Verificar se é uma URL válida
+  try {
+    const parsed = new URL(urlString);
+    // Verificar se é uma URL válida (http ou https)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return null;
     }
+    return parsed.href;
+  } catch {
+    // Se não conseguir fazer parse, verificar se parece com URL
+    if (urlString.startsWith('http://') || urlString.startsWith('https://')) {
+      return urlString;
+    }
+    return null;
   }
-  return null;
 }
 
 export default function PhotoGallery({
@@ -85,11 +113,15 @@ export default function PhotoGallery({
       })),
     });
 
-    // Processar checkInPhotoUrl
+    // Processar checkInPhotoUrl (apenas se não for URL temporária)
     const normalizedCheckInUrl = normalizeUrl(checkInPhotoUrl);
     if (normalizedCheckInUrl && isValidUrl(normalizedCheckInUrl)) {
-      result.push({ url: normalizedCheckInUrl, label: 'Check-in', type: 'FACADE_CHECKIN' });
-    } else if (checkInPhotoUrl) {
+      // Verificar se não é uma URL temporária/placeholder
+      if (!normalizedCheckInUrl.includes('placeholder.com') && 
+          !normalizedCheckInUrl.includes('mock-storage.local')) {
+        result.push({ url: normalizedCheckInUrl, label: 'Check-in', type: 'FACADE_CHECKIN' });
+      }
+    } else if (checkInPhotoUrl && !checkInPhotoUrl.includes('placeholder.com')) {
       console.warn('[PhotoGallery] checkInPhotoUrl inválida:', checkInPhotoUrl);
     }
 
@@ -111,8 +143,12 @@ export default function PhotoGallery({
     if (!result.some((p) => p.type === 'FACADE_CHECKOUT')) {
       const normalizedCheckOutUrl = normalizeUrl(checkOutPhotoUrl);
       if (normalizedCheckOutUrl && isValidUrl(normalizedCheckOutUrl)) {
-        result.push({ url: normalizedCheckOutUrl, label: 'Check-out', type: 'FACADE_CHECKOUT' });
-      } else if (checkOutPhotoUrl) {
+        // Verificar se não é uma URL temporária/placeholder
+        if (!normalizedCheckOutUrl.includes('placeholder.com') && 
+            !normalizedCheckOutUrl.includes('mock-storage.local')) {
+          result.push({ url: normalizedCheckOutUrl, label: 'Check-out', type: 'FACADE_CHECKOUT' });
+        }
+      } else if (checkOutPhotoUrl && !checkOutPhotoUrl.includes('placeholder.com')) {
         console.warn('[PhotoGallery] checkOutPhotoUrl inválida:', checkOutPhotoUrl);
       }
     }

@@ -129,52 +129,82 @@ export default function CheckInScreen({ route }: any) {
       console.log('📸 [CheckIn] Location:', location.coords);
       console.log('📸 [CheckIn] Photo URI:', photoUri);
 
-      // 1. Fazer check-in primeiro com URL temporária para obter visitId
-      console.log('📸 [CheckIn] Fazendo check-in inicial (sem foto)...');
-      const tempPhotoUrl = 'https://placeholder.com/checkin.jpg'; // URL temporária
+      // 1. Fazer check-in primeiro para obter visitId real
+      // Usaremos uma URL temporária que será substituída
+      console.log('📸 [CheckIn] Criando visita para obter visitId...');
+      const tempPhotoUrl = 'https://placeholder.com/checkin.jpg';
       
       const checkInResult = await visitService.checkIn({
         storeId: store.id,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        photoUrl: tempPhotoUrl,
+        photoUrl: tempPhotoUrl, // Temporária, será substituída
       });
 
-      console.log('✅ [CheckIn] Check-in criado, visitId:', checkInResult.visit?.id);
+      const visitId = checkInResult.visit?.id;
+      if (!visitId) {
+        throw new Error('Não foi possível obter o ID da visita');
+      }
 
-      // 2. Agora que temos o visitId, obter presigned URL e fazer upload da foto
-      if (photoUri && checkInResult.visit?.id) {
-        try {
-          console.log('📸 [CheckIn] Obtendo presigned URL com visitId real...');
-      const { presignedUrl, url } = await photoService.getPresignedUrl({
-            visitId: checkInResult.visit.id,
-        type: 'FACADE_CHECKIN',
-        contentType: 'image/jpeg',
-        extension: 'jpg',
-      });
+      console.log('✅ [CheckIn] Visita criada, visitId:', visitId);
 
-          console.log('📸 [CheckIn] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
-          console.log('📸 [CheckIn] URL final:', url);
+      // 2. Agora que temos o visitId real, fazer upload da foto
+      console.log('📸 [CheckIn] Obtendo presigned URL com visitId real...');
+      let photoUrl = '';
+      
+      try {
+        const { presignedUrl, url } = await photoService.getPresignedUrl({
+          visitId: visitId,
+          type: 'FACADE_CHECKIN',
+          contentType: 'image/jpeg',
+          extension: 'jpg',
+        });
 
-          // 3. Upload da foto para S3
+        console.log('📸 [CheckIn] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
+        console.log('📸 [CheckIn] URL final:', url);
+
+        // 3. Upload da foto para Firebase Storage
+        if (presignedUrl && photoUri) {
           console.log('📸 [CheckIn] Fazendo upload da foto...');
           const uploadSuccess = await photoService.uploadToS3(presignedUrl, photoUri, 'image/jpeg');
           
           if (uploadSuccess) {
             console.log('✅ [CheckIn] Upload da foto concluído com sucesso');
-            // TODO: Atualizar a visita com a URL correta da foto
-            // Por enquanto, a foto já está no S3 e o registro foi criado pelo backend
+            photoUrl = url; // URL pública do Firebase
           } else {
-            console.warn('⚠️ [CheckIn] Upload da foto falhou');
+            console.error('❌ [CheckIn] Upload da foto falhou');
+            throw new Error('Falha no upload da foto');
           }
-        } catch (uploadError: any) {
-          console.error('❌ [CheckIn] Erro no upload da foto:', uploadError);
-          console.error('❌ [CheckIn] Mensagem:', uploadError?.message);
-          // Continuar mesmo se o upload falhar - o check-in já foi criado
-          console.warn('⚠️ [CheckIn] Check-in criado, mas upload da foto falhou');
+        } else {
+          throw new Error('Presigned URL ou photoUri não disponível');
         }
-      } else {
-        console.warn('⚠️ [CheckIn] PhotoUri ou visitId não disponível para upload');
+      } catch (uploadError: any) {
+        console.error('❌ [CheckIn] Erro no upload da foto:', uploadError);
+        // Continuar mesmo se o upload falhar - a visita já foi criada
+        console.warn('⚠️ [CheckIn] Visita criada, mas upload da foto falhou');
+        photoUrl = tempPhotoUrl; // Manter URL temporária
+      }
+
+      // 4. Atualizar o registro da foto com a URL correta
+      if (photoUrl && photoUrl !== tempPhotoUrl) {
+        console.log('📸 [CheckIn] Atualizando registro da foto com URL correta...');
+        try {
+          // Usar uploadPhotos para atualizar/criar o registro correto
+          // O PhotoGallery prioriza photos[] sobre checkInPhotoUrl
+          await visitService.uploadPhotos({
+            visitId: visitId,
+            photos: [{
+              url: photoUrl,
+              type: 'FACADE_CHECKIN',
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            }],
+          });
+          console.log('✅ [CheckIn] Registro da foto atualizado');
+        } catch (updateError: any) {
+          console.warn('⚠️ [CheckIn] Erro ao atualizar registro da foto:', updateError);
+          // Continuar mesmo se falhar - a foto já está no Firebase
+        }
       }
 
       const result = checkInResult;
