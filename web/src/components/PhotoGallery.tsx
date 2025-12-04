@@ -114,31 +114,45 @@ export default function PhotoGallery({
       })),
     });
 
-    // Processar checkInPhotoUrl (apenas se não for URL temporária)
-    const normalizedCheckInUrl = normalizeUrl(checkInPhotoUrl);
-    if (normalizedCheckInUrl && isValidUrl(normalizedCheckInUrl)) {
-      // Verificar se não é uma URL temporária/placeholder
-      if (!normalizedCheckInUrl.includes('placeholder.com') && 
-          !normalizedCheckInUrl.includes('mock-storage.local')) {
-        result.push({ url: normalizedCheckInUrl, label: 'Check-in', type: 'FACADE_CHECKIN' });
-      }
-    } else if (checkInPhotoUrl && !checkInPhotoUrl.includes('placeholder.com')) {
-      console.warn('[PhotoGallery] checkInPhotoUrl inválida:', checkInPhotoUrl);
-    }
-
-    // Adicionar fotos adicionais
+    // Processar fotos do array primeiro (prioridade)
     photos.forEach((photo, index) => {
       const normalizedUrl = normalizeUrl(photo.url);
       if (normalizedUrl && isValidUrl(normalizedUrl)) {
-        result.push({
-          url: normalizedUrl,
-          label: photo.type === 'FACADE_CHECKOUT' ? 'Check-out' : 'Foto Adicional',
-          type: photo.type,
-        });
+        // Verificar se não é uma URL temporária/placeholder
+        if (!normalizedUrl.includes('placeholder.com') && 
+            !normalizedUrl.includes('mock-storage.local')) {
+          result.push({
+            url: normalizedUrl,
+            label: photo.type === 'FACADE_CHECKIN' ? 'Check-in' : 
+                   photo.type === 'FACADE_CHECKOUT' ? 'Check-out' : 
+                   'Foto Adicional',
+            type: photo.type,
+          });
+        } else {
+          console.warn(`[PhotoGallery] Foto ${index} filtrada (placeholder):`, photo);
+        }
       } else {
-        console.warn(`[PhotoGallery] Foto adicional ${index} com URL inválida:`, photo);
+        console.warn(`[PhotoGallery] Foto ${index} com URL inválida:`, photo);
       }
     });
+
+    // Processar checkInPhotoUrl apenas se não houver foto FACADE_CHECKIN no array
+    if (!result.some((p) => p.type === 'FACADE_CHECKIN')) {
+      const normalizedCheckInUrl = normalizeUrl(checkInPhotoUrl);
+      if (normalizedCheckInUrl && isValidUrl(normalizedCheckInUrl)) {
+        // Verificar se não é uma URL temporária/placeholder
+        if (!normalizedCheckInUrl.includes('placeholder.com') && 
+            !normalizedCheckInUrl.includes('mock-storage.local')) {
+          result.push({ url: normalizedCheckInUrl, label: 'Check-in', type: 'FACADE_CHECKIN' });
+        } else {
+          console.warn('[PhotoGallery] checkInPhotoUrl filtrada (placeholder):', checkInPhotoUrl);
+        }
+      } else if (checkInPhotoUrl && !checkInPhotoUrl.includes('placeholder.com')) {
+        console.warn('[PhotoGallery] checkInPhotoUrl inválida:', checkInPhotoUrl);
+      }
+    } else {
+      console.log('[PhotoGallery] Foto de check-in já está no array photos[], usando ela');
+    }
 
     // Processar checkOutPhotoUrl (apenas se não foi adicionada nas fotos adicionais)
     if (!result.some((p) => p.type === 'FACADE_CHECKOUT')) {

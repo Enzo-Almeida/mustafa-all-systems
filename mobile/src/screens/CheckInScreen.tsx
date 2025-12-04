@@ -166,7 +166,7 @@ export default function CheckInScreen({ route }: any) {
         // 3. Upload da foto para Firebase Storage
         if (presignedUrl && photoUri) {
           console.log('📸 [CheckIn] Fazendo upload da foto...');
-          const uploadSuccess = await photoService.uploadToS3(presignedUrl, photoUri, 'image/jpeg');
+          const uploadSuccess = await photoService.uploadToFirebase(presignedUrl, photoUri, 'image/jpeg');
           
           if (uploadSuccess) {
             console.log('✅ [CheckIn] Upload da foto concluído com sucesso');

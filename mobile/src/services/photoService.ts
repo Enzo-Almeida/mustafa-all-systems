@@ -38,7 +38,7 @@ export const photoService = {
    * Faz upload de uma foto para Firebase Storage usando presigned URL
    * Compatível com React Native usando expo-file-system
    */
-  async uploadToS3(presignedUrl: string, fileUri: string, contentType: string = 'image/jpeg'): Promise<boolean> {
+  async uploadToFirebase(presignedUrl: string, fileUri: string, contentType: string = 'image/jpeg'): Promise<boolean> {
     try {
       console.log('📤 [photoService] Iniciando upload para Firebase Storage...');
       console.log('📤 [photoService] Presigned URL:', presignedUrl.substring(0, 100) + '...');

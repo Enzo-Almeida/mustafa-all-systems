@@ -1,32 +1,18 @@
-# 🔥 Regras do Firebase Storage
+# 🔥 Regras do Firebase Storage - Versão Final
 
-## ⚠️ Problema
-
-As regras atuais estão bloqueando todos os uploads:
-```javascript
-allow read, write: if false;
-```
-
-Isso impede que as fotos sejam enviadas para o bucket, mesmo com presigned URLs.
-
-## ✅ Solução: Regras Corretas
-
-### Código para Firebase Console
+## ✅ Código Correto para Firebase Console
 
 Acesse: https://console.firebase.google.com/ > Seu Projeto > Storage > Rules
 
-Cole este código:
+**Cole este código (versão simplificada e garantida):**
 
 ```javascript
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permitir leitura pública de todas as fotos
+    // Permitir acesso público completo para fotos
     match /photos/{allPaths=**} {
-      allow read: if true;
-      // Permitir escrita via presigned URLs (assinadas pelo backend)
-      // O backend gera URLs assinadas, então não precisamos de autenticação aqui
-      allow write: if true;
+      allow read, write: if true;
     }
     
     // Bloquear tudo que não for photos (segurança)

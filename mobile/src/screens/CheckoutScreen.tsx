@@ -217,11 +217,11 @@ export default function CheckoutScreen({ route }: any) {
       console.log('📸 [Checkout] Presigned URL obtida:', presignedUrl ? 'Sim' : 'Não');
       console.log('📸 [Checkout] URL final:', url);
 
-      // 2. Upload da foto para S3
+      // 2. Upload da foto para Firebase Storage
       if (photoUri && presignedUrl) {
         try {
           console.log('📸 [Checkout] Fazendo upload da foto...');
-          const uploadSuccess = await photoService.uploadToS3(presignedUrl, photoUri, 'image/jpeg');
+          const uploadSuccess = await photoService.uploadToFirebase(presignedUrl, photoUri, 'image/jpeg');
           
           if (!uploadSuccess) {
             console.warn('⚠️ [Checkout] Upload da foto falhou, mas continuando com checkout...');

@@ -194,15 +194,25 @@ export default function ActiveVisitScreen({ route }: any) {
           // Fazer upload para Firebase Storage
           if (presignedUrl && photo.uri) {
             console.log('📸 [ActiveVisit] Fazendo upload da foto para Firebase...');
-            const uploadSuccess = await photoService.uploadToS3(presignedUrl, photo.uri, 'image/jpeg');
+            console.log('📸 [ActiveVisit] Presigned URL (primeiros 150 chars):', presignedUrl.substring(0, 150));
+            console.log('📸 [ActiveVisit] Photo URI:', photo.uri);
+            
+            const uploadSuccess = await photoService.uploadToFirebase(presignedUrl, photo.uri, 'image/jpeg');
             
             if (!uploadSuccess) {
-              console.error('❌ [ActiveVisit] Upload da foto falhou');
-              throw new Error('Falha no upload da foto');
+              console.error('❌ [ActiveVisit] Upload da foto falhou - uploadSuccess retornou false');
+              console.error('❌ [ActiveVisit] NÃO será salvo no banco de dados');
+              throw new Error('Falha no upload da foto - upload retornou false');
             }
             
             console.log('✅ [ActiveVisit] Upload da foto concluído com sucesso');
-            console.log('✅ [ActiveVisit] URL da foto:', url);
+            console.log('✅ [ActiveVisit] URL da foto que será salva:', url);
+            
+            // Verificar se a URL está correta antes de retornar
+            if (!url || url.includes('placeholder.com') || url.includes('mock-storage.local')) {
+              console.error('❌ [ActiveVisit] URL inválida gerada:', url);
+              throw new Error('URL inválida gerada pelo backend');
+            }
           } else {
             console.warn('⚠️ [ActiveVisit] Presigned URL ou photoUri não disponível');
             console.warn('⚠️ [ActiveVisit] presignedUrl:', !!presignedUrl, 'photo.uri:', !!photo.uri);
@@ -233,10 +243,16 @@ export default function ActiveVisitScreen({ route }: any) {
       const failedUploads = uploadResults.filter((result) => result.status === 'rejected');
       
       if (failedUploads.length > 0) {
-        console.error('❌ [ActiveVisit] Algumas fotos falharam:', failedUploads.length);
+        console.error('❌ [ActiveVisit] ===== FOTOS QUE FALHARAM NO UPLOAD =====');
+        console.error('❌ [ActiveVisit] Total de falhas:', failedUploads.length);
         failedUploads.forEach((result, index) => {
-          console.error(`❌ [ActiveVisit] Foto ${index + 1} falhou:`, (result as PromiseRejectedResult).reason);
+          const reason = (result as PromiseRejectedResult).reason;
+          console.error(`❌ [ActiveVisit] Foto ${index + 1} falhou:`, {
+            message: reason?.message || String(reason),
+            error: reason,
+          });
         });
+        console.error('❌ [ActiveVisit] ===========================================');
       }
 
       if (uploadedPhotos.length === 0) {
