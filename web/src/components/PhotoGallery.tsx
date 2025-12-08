@@ -98,9 +98,9 @@ export default function PhotoGallery({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
 
-  // Combinar todas as fotos com validação (usar useMemo para recalcular quando props mudarem)
-  const allPhotos: Array<{ url: string; label: string; type?: string }> = useMemo(() => {
-    const result: Array<{ url: string; label: string; type?: string }> = [];
+  // Combinar todas as fotos com validação e ordenação correta
+  const allPhotos: Array<{ url: string; label: string; type?: string; createdAt?: string | Date }> = useMemo(() => {
+    const result: Array<{ url: string; label: string; type?: string; createdAt?: string | Date }> = [];
 
     // Debug: Log dos dados recebidos
     console.log('[PhotoGallery] Processando fotos:', {
@@ -110,11 +110,12 @@ export default function PhotoGallery({
       photos: photos.map((p) => ({ 
         url: p.url, 
         urlType: typeof p.url,
-        type: p.type 
+        type: p.type,
+        createdAt: p.createdAt
       })),
     });
 
-    // Processar fotos do array primeiro (prioridade)
+    // Processar todas as fotos do array (incluindo check-in e checkout que já estão no array)
     photos.forEach((photo, index) => {
       const normalizedUrl = normalizeUrl(photo.url);
       if (normalizedUrl && isValidUrl(normalizedUrl)) {
@@ -125,8 +126,9 @@ export default function PhotoGallery({
             url: normalizedUrl,
             label: photo.type === 'FACADE_CHECKIN' ? 'Check-in' : 
                    photo.type === 'FACADE_CHECKOUT' ? 'Check-out' : 
-                   'Foto Adicional',
+                   'Foto da Visita',
             type: photo.type,
+            createdAt: photo.createdAt,
           });
         } else {
           console.warn(`[PhotoGallery] Foto ${index} filtrada (placeholder):`, photo);
@@ -136,39 +138,67 @@ export default function PhotoGallery({
       }
     });
 
-    // Processar checkInPhotoUrl apenas se não houver foto FACADE_CHECKIN no array
+    // Adicionar checkInPhotoUrl se não estiver no array (fallback)
     if (!result.some((p) => p.type === 'FACADE_CHECKIN')) {
       const normalizedCheckInUrl = normalizeUrl(checkInPhotoUrl);
       if (normalizedCheckInUrl && isValidUrl(normalizedCheckInUrl)) {
-        // Verificar se não é uma URL temporária/placeholder
         if (!normalizedCheckInUrl.includes('placeholder.com') && 
             !normalizedCheckInUrl.includes('mock-storage.local')) {
-          result.push({ url: normalizedCheckInUrl, label: 'Check-in', type: 'FACADE_CHECKIN' });
-        } else {
-          console.warn('[PhotoGallery] checkInPhotoUrl filtrada (placeholder):', checkInPhotoUrl);
+          result.push({ 
+            url: normalizedCheckInUrl, 
+            label: 'Check-in', 
+            type: 'FACADE_CHECKIN',
+            createdAt: new Date(0), // Data antiga para ordenação
+          });
         }
-      } else if (checkInPhotoUrl && !checkInPhotoUrl.includes('placeholder.com')) {
-        console.warn('[PhotoGallery] checkInPhotoUrl inválida:', checkInPhotoUrl);
       }
-    } else {
-      console.log('[PhotoGallery] Foto de check-in já está no array photos[], usando ela');
     }
 
-    // Processar checkOutPhotoUrl (apenas se não foi adicionada nas fotos adicionais)
+    // Adicionar checkOutPhotoUrl se não estiver no array (fallback)
     if (!result.some((p) => p.type === 'FACADE_CHECKOUT')) {
       const normalizedCheckOutUrl = normalizeUrl(checkOutPhotoUrl);
       if (normalizedCheckOutUrl && isValidUrl(normalizedCheckOutUrl)) {
-        // Verificar se não é uma URL temporária/placeholder
         if (!normalizedCheckOutUrl.includes('placeholder.com') && 
             !normalizedCheckOutUrl.includes('mock-storage.local')) {
-          result.push({ url: normalizedCheckOutUrl, label: 'Check-out', type: 'FACADE_CHECKOUT' });
+          result.push({ 
+            url: normalizedCheckOutUrl, 
+            label: 'Check-out', 
+            type: 'FACADE_CHECKOUT',
+            createdAt: new Date(), // Data recente para ordenação
+          });
         }
-      } else if (checkOutPhotoUrl && !checkOutPhotoUrl.includes('placeholder.com')) {
-        console.warn('[PhotoGallery] checkOutPhotoUrl inválida:', checkOutPhotoUrl);
       }
     }
 
+    // Ordenar fotos na ordem correta: Check-in, Fotos da Visita (OTHER), Check-out
+    result.sort((a, b) => {
+      // Definir ordem de prioridade por tipo
+      const typeOrder: Record<string, number> = {
+        'FACADE_CHECKIN': 1,
+        'OTHER': 2,
+        'FACADE_CHECKOUT': 3,
+      };
+      
+      const aOrder = typeOrder[a.type || 'OTHER'] || 2;
+      const bOrder = typeOrder[b.type || 'OTHER'] || 2;
+      
+      // Se tipos diferentes, ordenar por tipo
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
+      
+      // Se mesmo tipo (OTHER), ordenar por data de criação (mais antiga primeiro)
+      if (a.type === 'OTHER' && b.type === 'OTHER') {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return aDate - bDate;
+      }
+      
+      return 0;
+    });
+
     console.log('[PhotoGallery] Fotos válidas encontradas:', result.length);
+    console.log('[PhotoGallery] Ordem das fotos:', result.map(p => ({ label: p.label, type: p.type })));
     return result;
   }, [checkInPhotoUrl, checkOutPhotoUrl, photos]);
 

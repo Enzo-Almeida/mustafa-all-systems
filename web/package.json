@@ -9,23 +9,25 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.3.2",
+    "@tanstack/react-query": "^5.14.2",
+    "axios": "^1.6.2",
+    "date-fns": "^3.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
+    "leaflet": "^1.9.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.1",
-    "axios": "^1.6.2",
-    "recharts": "^2.10.3",
-    "leaflet": "^1.9.4",
-    "react-leaflet": "^4.2.1",
-    "@tanstack/react-query": "^5.14.2",
-    "date-fns": "^3.0.0",
     "react-hook-form": "^7.49.2",
-    "zod": "^3.22.4",
-    "@hookform/resolvers": "^3.3.2"
+    "react-leaflet": "^4.2.1",
+    "react-router-dom": "^6.20.1",
+    "recharts": "^2.10.3",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.8",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@types/leaflet": "^1.9.8",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
@@ -39,4 +41,3 @@
     "vite": "^5.0.8"
   }
 }
-

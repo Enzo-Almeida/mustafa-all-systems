@@ -250,7 +250,7 @@ export async function getPromoterVisits(req: AuthRequest, res: Response) {
           store: true,
           photos: {
             orderBy: {
-              createdAt: 'desc',
+              createdAt: 'asc',
             },
           },
         },

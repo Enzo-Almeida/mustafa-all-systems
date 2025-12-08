@@ -368,9 +368,14 @@ export async function getCurrentVisit(req: AuthRequest, res: Response) {
       include: {
         store: true,
         photos: {
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: [
+            {
+              type: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
         },
       },
       orderBy: {
@@ -415,7 +420,7 @@ export async function getVisits(req: AuthRequest, res: Response) {
           store: true,
           photos: {
             orderBy: {
-              createdAt: 'desc',
+              createdAt: 'asc',
             },
           },
         },

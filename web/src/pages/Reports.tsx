@@ -6,6 +6,7 @@ import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
+import { generatePhotoBooking } from '../utils/photoBooking';
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState({
@@ -16,11 +17,29 @@ export default function Reports() {
   const [exporting, setExporting] = useState(false);
   const [exportJobId, setExportJobId] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<any>(null);
+  
+  // Estados para booking de fotos
+  const [selectedPromoterId, setSelectedPromoterId] = useState<string>('');
+  const [generatingBooking, setGeneratingBooking] = useState(false);
 
   const { data: missingPhotos, isLoading } = useQuery({
     queryKey: ['missing-photos', dateRange],
     queryFn: () =>
       supervisorService.getMissingPhotos(undefined, dateRange.startDate, dateRange.endDate),
+  });
+
+  const { data: promotersData } = useQuery({
+    queryKey: ['promoters'],
+    queryFn: () => supervisorService.getPromoters(),
+  });
+
+  const { data: promoterVisits, isLoading: loadingVisits } = useQuery({
+    queryKey: ['promoter-visits-booking', selectedPromoterId, dateRange],
+    queryFn: () => {
+      if (!selectedPromoterId) return Promise.resolve({ visits: [] });
+      return supervisorService.getPromoterVisits(selectedPromoterId, 1, 1000);
+    },
+    enabled: !!selectedPromoterId,
   });
 
   // Polling do status de exportação
@@ -77,6 +96,34 @@ export default function Reports() {
       document.body.removeChild(a);
     } catch (error: any) {
       alert('Erro ao baixar relatório: ' + (error.response?.data?.message || error.message));
+    }
+  }
+
+  async function handleGenerateBooking() {
+    if (!selectedPromoterId) {
+      alert('Selecione um promotor para gerar o booking');
+      return;
+    }
+
+    const promoter = promotersData?.promoters?.find((p: any) => p.id === selectedPromoterId);
+    if (!promoter) {
+      alert('Promotor não encontrado');
+      return;
+    }
+
+    if (!promoterVisits?.visits || promoterVisits.visits.length === 0) {
+      alert('Nenhuma visita encontrada para este promotor no período selecionado');
+      return;
+    }
+
+    setGeneratingBooking(true);
+    try {
+      await generatePhotoBooking(promoter, promoterVisits.visits, dateRange);
+    } catch (error: any) {
+      console.error('Erro ao gerar booking:', error);
+      alert('Erro ao gerar booking: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setGeneratingBooking(false);
     }
   }
 
@@ -210,6 +257,72 @@ export default function Reports() {
                 )}
               </CardContent>
             </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Booking de Fotos */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-xl font-semibold text-text-primary">Booking de Fotos</h2>
+          <p className="text-sm text-text-tertiary mt-1">
+            Gere um PDF com todas as fotos do promotor organizadas por loja e em ordem cronológica
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-text-700 mb-1.5">
+                Selecionar Promotor
+              </label>
+              <select
+                value={selectedPromoterId}
+                onChange={(e) => setSelectedPromoterId(e.target.value)}
+                className="w-full px-4 py-2.5 border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 transition-all bg-dark-card text-text-primary"
+              >
+                <option value="">Selecione um promotor</option>
+                {promotersData?.promoters?.map((promoter: any) => (
+                  <option key={promoter.id} value={promoter.id}>
+                    {promoter.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Input
+                label="Data Inicial"
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <Input
+                label="Data Final"
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handleGenerateBooking}
+            isLoading={generatingBooking}
+            disabled={generatingBooking || !selectedPromoterId || loadingVisits}
+            className="w-full md:w-auto"
+          >
+            {generatingBooking ? 'Gerando Booking...' : '📸 Gerar Booking de Fotos'}
+          </Button>
+
+          {selectedPromoterId && promoterVisits?.visits && (
+            <div className="mt-4 p-4 bg-primary-600/10 rounded-lg border border-primary-600/20">
+              <p className="text-sm text-text-secondary">
+                <strong>{promoterVisits.visits.length}</strong> visita(s) encontrada(s) no período selecionado
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
