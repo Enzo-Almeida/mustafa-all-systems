@@ -6,8 +6,23 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // Create test users
+  const adminPassword = await hashPassword('admin123');
   const supervisorPassword = await hashPassword('senha123');
   const promoterPassword = await hashPassword('senha123');
+
+  // Create admin
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@promo.com' },
+    update: {},
+    create: {
+      email: 'admin@promo.com',
+      name: 'Administrador',
+      password: adminPassword,
+      role: UserRole.ADMIN,
+    },
+  });
+
+  console.log('✅ Admin created:', admin.email);
 
   // Create supervisor
   const supervisor = await prisma.user.upsert({
@@ -102,7 +117,10 @@ async function main() {
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('\n📝 Test credentials:');
-  console.log('Supervisor:');
+  console.log('Admin:');
+  console.log('  Email: admin@promo.com');
+  console.log('  Password: admin123');
+  console.log('\nSupervisor:');
   console.log('  Email: supervisor@teste.com');
   console.log('  Password: senha123');
   console.log('\nPromoters:');

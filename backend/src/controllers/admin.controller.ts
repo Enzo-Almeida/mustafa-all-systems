@@ -22,8 +22,26 @@ export async function seedDatabase(req: Request, res: Response) {
     console.log('🌱 Starting database seed...');
 
     // Create test users
+    const adminPassword = await hashPassword('admin123');
     const supervisorPassword = await hashPassword('senha123');
     const promoterPassword = await hashPassword('senha123');
+
+    // Create admin
+    const admin = await prisma.user.upsert({
+      where: { email: 'admin@promo.com' },
+      update: {
+        password: adminPassword,
+        role: UserRole.ADMIN,
+      },
+      create: {
+        email: 'admin@promo.com',
+        name: 'Administrador',
+        password: adminPassword,
+        role: UserRole.ADMIN,
+      },
+    });
+
+    console.log('✅ Admin created:', admin.email);
 
     // Create supervisor
     const supervisor = await prisma.user.upsert({
@@ -118,6 +136,7 @@ export async function seedDatabase(req: Request, res: Response) {
       success: true,
       message: 'Database seeded successfully',
       users: {
+        admin: admin.email,
         supervisor: supervisor.email,
         promoters: promoters.map(p => p.email),
       },
