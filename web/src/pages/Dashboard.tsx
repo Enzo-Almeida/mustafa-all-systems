@@ -205,13 +205,16 @@ export default function Dashboard() {
   const stats = data?.stats || {};
   const visitsByPromoterRaw = data?.visitsByPromoter || [];
   
-  const visitsByPromoter = visitsByPromoterRaw.map((item: any) => {
-    const promoter = promotersData?.promoters?.find((p: any) => p.id === item.promoterId);
-    return {
-      ...item,
-      promoterName: promoter?.name || `Promotor ${item.promoterId.slice(0, 8)}`,
-    };
-  });
+  // Memoizar visitsByPromoter para evitar recálculos desnecessários
+  const visitsByPromoter = useMemo(() => {
+    return visitsByPromoterRaw.map((item: any) => {
+      const promoter = promotersData?.promoters?.find((p: any) => p.id === item.promoterId);
+      return {
+        ...item,
+        promoterName: promoter?.name || `Promotor ${item.promoterId?.slice(0, 8) || 'Unknown'}`,
+      };
+    });
+  }, [visitsByPromoterRaw, promotersData?.promoters]);
 
   // Cards de KPIs de Problemas
   const problemKPIs = [
@@ -269,7 +272,21 @@ export default function Dashboard() {
 
   // Preparar dados para Analytics
   const analyticsData = useMemo(() => {
-    const visits = data?.visitsByPromoter || [];
+    if (!data || !visitsByPromoter) {
+      return {
+        visitsOverTime: [],
+        performanceByPromoter: [],
+        activityHeatmap: [],
+        trends: {
+          visits: { current: 0, previous: 0, change: 0 },
+          hours: { current: 0, previous: 0, change: 0 },
+          photos: { current: 0, previous: 0, change: 0 },
+          compliance: { current: 0, previous: 0, change: 0 },
+        },
+      };
+    }
+
+    const visits = data.visitsByPromoter || [];
     const visitsOverTime = visits.map((v: any) => ({
       date: new Date(v.date || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       visits: v.visitCount || 0,
@@ -277,7 +294,7 @@ export default function Dashboard() {
     }));
 
     const performanceByPromoter = visitsByPromoter.map((v: any) => ({
-      name: v.promoterName,
+      name: v.promoterName || 'Desconhecido',
       visits: v.visitCount || 0,
       hours: v.totalHours || 0,
       photos: v.totalPhotos || 0,
