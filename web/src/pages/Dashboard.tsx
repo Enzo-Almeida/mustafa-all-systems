@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supervisorService } from '../services/supervisorService';
@@ -449,10 +449,11 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Sempre renderizar componentes com hooks, mas ocultá-los quando não estão ativos */}
-      <div style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
-        {/* Métricas em Tempo Real */}
-        <RealtimeMetrics refreshInterval={10} />
+      {/* Renderizar componentes apenas quando necessário */}
+      {activeTab === 'overview' && (
+        <div>
+          {/* Métricas em Tempo Real */}
+          <RealtimeMetrics refreshInterval={10} />
 
         {/* Filtros Avançados */}
         <AdvancedFilters
@@ -823,22 +824,23 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         )}
-      </div>
+        </div>
+      )}
 
-      {/* Painel de Análises */}
-      <div style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
+      {/* Painel de Análises - TEMPORARIAMENTE DESABILITADO */}
+      {/* {activeTab === 'analytics' && (
         <AnalyticsPanel data={analyticsData} />
-      </div>
+      )} */}
 
-      {/* Painel de Conformidade */}
-      <div style={{ display: activeTab === 'compliance' ? 'block' : 'none' }}>
+      {/* Painel de Conformidade - TEMPORARIAMENTE DESABILITADO */}
+      {/* {activeTab === 'compliance' && (
         <CompliancePanel promoters={complianceData} />
-      </div>
+      )} */}
 
-      {/* Ferramentas de Exportação */}
-      <div style={{ display: activeTab === 'export' ? 'block' : 'none' }}>
+      {/* Ferramentas de Exportação - TEMPORARIAMENTE DESABILITADO */}
+      {/* {activeTab === 'export' && (
         <ExportTools filters={filters} />
-      </div>
+      )} */}
     </div>
   );
 }
