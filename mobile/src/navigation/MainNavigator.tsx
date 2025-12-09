@@ -25,18 +25,27 @@ function LoadingScreen() {
 // StoresScreen também precisa de lazy loading pois usa expo-location (import estático causa erro na inicialização)
 
 function StoresScreenWrapper(props: any) {
+  // Sempre chamar hooks na mesma ordem
   const [Screen, setScreen] = React.useState<React.ComponentType<any> | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Usar useMemo para garantir que o módulo seja carregado de forma estável
   React.useEffect(() => {
+    let mounted = true;
     const timer = setTimeout(() => {
       try {
         const module = require('../screens/IndustriesScreen');
         if (module && module.default) {
-          setScreen(() => module.default);
+          if (mounted) {
+            setScreen(() => module.default);
+            setIsLoading(false);
+          }
         } else {
-          setError('Módulo StoresScreen não tem export default válido');
+          if (mounted) {
+            setError('Módulo StoresScreen não tem export default válido');
+            setIsLoading(false);
+          }
         }
       } catch (err: any) {
         const errorMsg = err?.message || err?.toString() || 'Erro desconhecido';
@@ -49,27 +58,37 @@ function StoresScreenWrapper(props: any) {
           // Tentar novamente após ignorar o erro
           try {
             const module = require('../screens/IndustriesScreen');
-            if (module && module.default) {
+            if (module && module.default && mounted) {
               setScreen(() => module.default);
-            } else {
+              setIsLoading(false);
+            } else if (mounted) {
               setError('Módulo StoresScreen não tem export default válido');
+              setIsLoading(false);
             }
           } catch (retryErr: any) {
-            console.error('Erro ao carregar StoresScreen após retry:', retryErr);
-            setError('Erro ao carregar tela de lojas');
+            if (mounted) {
+              console.error('Erro ao carregar StoresScreen após retry:', retryErr);
+              setError('Erro ao carregar tela de lojas');
+              setIsLoading(false);
+            }
           }
         } else {
-          console.error('Erro ao carregar StoresScreen:', err);
-          setError('Erro ao carregar tela de lojas');
+          if (mounted) {
+            console.error('Erro ao carregar StoresScreen:', err);
+            setError('Erro ao carregar tela de lojas');
+            setIsLoading(false);
+          }
         }
-      } finally {
-        setIsLoading(false);
       }
-    }, 500); // Aumentar delay para dar mais tempo
+    }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
+  // Sempre retornar um componente válido
   if (error) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>

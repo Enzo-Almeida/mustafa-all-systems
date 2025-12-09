@@ -92,6 +92,12 @@ try {
 console.log('✅ Todos os imports concluídos');
 
 function AppNavigator() {
+  // Sempre chamar useAuth primeiro, antes de qualquer condicional
+  // Isso garante que os hooks sejam sempre chamados na mesma ordem
+  const authResult = useAuth && useAuth();
+  const user = authResult?.user ?? null;
+  const loading = authResult?.loading ?? false;
+
   if (!useAuth || !LoadingScreen || !NavigationContainer || !AuthNavigator) {
     console.error('❌ Dependências críticas de navegação não foram carregadas corretamente');
     const { View, Text } = require('react-native');
@@ -103,25 +109,19 @@ function AppNavigator() {
     );
   }
 
-  const { user, loading } = useAuth();
-
   if (loading) {
     return <LoadingScreen />;
   }
 
-  // Se MainNavigator não foi carregado, mostrar apenas AuthNavigator
-  if (!MainNavigator) {
-    console.warn('⚠️ MainNavigator não foi carregado, mostrando apenas AuthNavigator');
-    return (
-      <NavigationContainer>
-        <AuthNavigator />
-      </NavigationContainer>
-    );
-  }
-
+  // Sempre renderizar NavigationContainer para manter consistência dos hooks
+  // Renderizar o navigator apropriado dentro dele
   return (
     <NavigationContainer>
-      {user ? <MainNavigator /> : <AuthNavigator />}
+      {user && MainNavigator ? (
+        <MainNavigator />
+      ) : (
+        <AuthNavigator />
+      )}
     </NavigationContainer>
   );
 }

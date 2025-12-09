@@ -808,13 +808,17 @@ export default function Dashboard() {
       )}
 
       {/* Painel de Análises */}
-      {activeTab === 'analytics' ? <AnalyticsPanel data={analyticsData} /> : null}
+      {activeTab === 'analytics' && analyticsData && (
+        <AnalyticsPanel data={analyticsData} />
+      )}
 
       {/* Painel de Conformidade */}
-      {activeTab === 'compliance' ? <CompliancePanel promoters={complianceData} /> : null}
+      {activeTab === 'compliance' && complianceData && (
+        <CompliancePanel promoters={complianceData} />
+      )}
 
       {/* Ferramentas de Exportação */}
-      {activeTab === 'export' ? <ExportTools filters={filters} /> : null}
+      {activeTab === 'export' && <ExportTools filters={filters} />}
     </div>
   );
 }

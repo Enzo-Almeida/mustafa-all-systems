@@ -26,35 +26,38 @@ interface CompliancePanelProps {
 }
 
 export default function CompliancePanel({ promoters }: CompliancePanelProps) {
-  const complianceData = promoters.map((p) => ({
-    name: p.name,
-    fotos: p.photoCompliance,
-    horario: p.scheduleCompliance,
-    rota: p.routeCompliance,
-    geral: (p.photoCompliance + p.scheduleCompliance + p.routeCompliance) / 3,
-  }));
+  // Validar dados antes de processar
+  if (!promoters || !Array.isArray(promoters) || promoters.length === 0) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent>
+            <p className="text-text-secondary">Nenhum dado de conformidade disponível.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const overallCompliance = promoters.length > 0
-    ? promoters.reduce((sum, p) => sum + (p.photoCompliance + p.scheduleCompliance + p.routeCompliance) / 3, 0) / promoters.length
+  const complianceData = promoters
+    .filter((p) => p && p.id && p.name)
+    .map((p) => ({
+      name: p.name || 'Desconhecido',
+      fotos: p.photoCompliance || 0,
+      horario: p.scheduleCompliance || 0,
+      rota: p.routeCompliance || 0,
+      geral: ((p.photoCompliance || 0) + (p.scheduleCompliance || 0) + (p.routeCompliance || 0)) / 3,
+    }));
+
+  const overallCompliance = complianceData.length > 0
+    ? complianceData.reduce((sum, p) => sum + p.geral, 0) / complianceData.length
     : 0;
 
   const complianceStatus = {
-    excellent: promoters.filter((p) => {
-      const avg = (p.photoCompliance + p.scheduleCompliance + p.routeCompliance) / 3;
-      return avg >= 90;
-    }).length,
-    good: promoters.filter((p) => {
-      const avg = (p.photoCompliance + p.scheduleCompliance + p.routeCompliance) / 3;
-      return avg >= 70 && avg < 90;
-    }).length,
-    attention: promoters.filter((p) => {
-      const avg = (p.photoCompliance + p.scheduleCompliance + p.routeCompliance) / 3;
-      return avg >= 50 && avg < 70;
-    }).length,
-    critical: promoters.filter((p) => {
-      const avg = (p.photoCompliance + p.scheduleCompliance + p.routeCompliance) / 3;
-      return avg < 50;
-    }).length,
+    excellent: complianceData.filter((p) => p.geral >= 90).length,
+    good: complianceData.filter((p) => p.geral >= 70 && p.geral < 90).length,
+    attention: complianceData.filter((p) => p.geral >= 50 && p.geral < 70).length,
+    critical: complianceData.filter((p) => p.geral < 50).length,
   };
 
   const pieData = [
@@ -194,37 +197,38 @@ export default function CompliancePanel({ promoters }: CompliancePanelProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border">
-                {promoters.map((promoter) => {
-                  const avg = (promoter.photoCompliance + promoter.scheduleCompliance + promoter.routeCompliance) / 3;
+                {complianceData.map((promoter, index) => {
+                  const originalPromoter = promoters[index];
+                  const avg = promoter.geral;
                   const status = avg >= 90 ? 'success' : avg >= 70 ? 'primary' : avg >= 50 ? 'warning' : 'error';
                   
                   return (
-                    <tr key={promoter.id} className="hover:bg-dark-cardElevated">
+                    <tr key={originalPromoter?.id || index} className="hover:bg-dark-cardElevated">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                         {promoter.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge
-                          variant={promoter.photoCompliance >= 80 ? 'success' : promoter.photoCompliance >= 50 ? 'warning' : 'error'}
+                          variant={promoter.fotos >= 80 ? 'success' : promoter.fotos >= 50 ? 'warning' : 'error'}
                           size="sm"
                         >
-                          {promoter.photoCompliance.toFixed(0)}%
+                          {promoter.fotos.toFixed(0)}%
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge
-                          variant={promoter.scheduleCompliance >= 80 ? 'success' : promoter.scheduleCompliance >= 50 ? 'warning' : 'error'}
+                          variant={promoter.horario >= 80 ? 'success' : promoter.horario >= 50 ? 'warning' : 'error'}
                           size="sm"
                         >
-                          {promoter.scheduleCompliance.toFixed(0)}%
+                          {promoter.horario.toFixed(0)}%
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Badge
-                          variant={promoter.routeCompliance >= 80 ? 'success' : promoter.routeCompliance >= 50 ? 'warning' : 'error'}
+                          variant={promoter.rota >= 80 ? 'success' : promoter.rota >= 50 ? 'warning' : 'error'}
                           size="sm"
                         >
-                          {promoter.routeCompliance.toFixed(0)}%
+                          {promoter.rota.toFixed(0)}%
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

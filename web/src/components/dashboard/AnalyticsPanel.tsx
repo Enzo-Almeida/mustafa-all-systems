@@ -36,11 +36,29 @@ interface AnalyticsPanelProps {
 export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
   const COLORS = ['#7c3aed', '#f59e0b', '#22c55e', '#ef4444', '#3b82f6'];
 
+  // Validar dados antes de renderizar
+  if (!data || !data.trends) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent>
+            <p className="text-text-secondary">Carregando dados...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const trends = data.trends || {};
+  const visitsOverTime = data.visitsOverTime || [];
+  const performanceByPromoter = data.performanceByPromoter || [];
+  const activityHeatmap = data.activityHeatmap || [];
+
   return (
     <div className="space-y-6">
       {/* Tendências e Comparativos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Object.entries(data.trends).map(([key, trend]) => {
+        {Object.entries(trends).map(([key, trend]) => {
           const isPositive = trend.change >= 0;
           const labels: Record<string, string> = {
             visits: 'Visitas',
@@ -83,7 +101,7 @@ export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data.visitsOverTime}>
+            <AreaChart data={visitsOverTime}>
               <defs>
                 <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.8} />
@@ -144,7 +162,7 @@ export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.performanceByPromoter}>
+            <BarChart data={performanceByPromoter}>
               <CartesianGrid strokeDasharray="3 3" stroke="#3D3550" />
               <XAxis
                 dataKey="name"
@@ -184,7 +202,7 @@ export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {data.activityHeatmap.map((item, idx) => {
+            {activityHeatmap.map((item, idx) => {
               const intensity = item.visits > 10 ? 'high' : item.visits > 5 ? 'medium' : 'low';
               const colors = {
                 high: 'bg-success-500',
@@ -217,7 +235,7 @@ export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={data.visitsOverTime}>
+              <LineChart data={visitsOverTime}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3D3550" />
                 <XAxis
                   dataKey="date"
@@ -257,7 +275,7 @@ export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={data.performanceByPromoter.map((p) => ({
+                  data={performanceByPromoter.map((p) => ({
                     name: p.name,
                     value: p.visits,
                   }))}
@@ -269,7 +287,7 @@ export default function AnalyticsPanel({ data }: AnalyticsPanelProps) {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {data.performanceByPromoter.map((entry, index) => (
+                  {performanceByPromoter.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
