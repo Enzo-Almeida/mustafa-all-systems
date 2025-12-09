@@ -103,20 +103,9 @@ export default function Dashboard() {
   const [selectedPromoters, setSelectedPromoters] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'compliance' | 'export'>('overview');
 
-  // Criar uma chave estável para o queryKey
-  // Usar valores primitivos para evitar problemas com referências
-  const filtersKey = useMemo(() => {
-    return `${filters.startDate}-${filters.endDate}-${filters.selectedPromoters.length}-${filters.selectedStores.length}-${filters.status}-${filters.compliance.photos}-${filters.compliance.schedule}-${filters.compliance.priceResearch}`;
-  }, [
-    filters.startDate,
-    filters.endDate,
-    filters.selectedPromoters.length,
-    filters.selectedStores.length,
-    filters.status,
-    filters.compliance.photos,
-    filters.compliance.schedule,
-    filters.compliance.priceResearch,
-  ]);
+  // Criar uma chave estável para o queryKey usando valores primitivos diretamente
+  // Não usar useMemo aqui para evitar problemas com dependências
+  const filtersKey = `${filters.startDate}-${filters.endDate}-${filters.selectedPromoters.length}-${filters.selectedStores.length}-${filters.status}-${filters.compliance.photos}-${filters.compliance.schedule}-${filters.compliance.priceResearch}`;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', filtersKey],
@@ -174,47 +163,44 @@ export default function Dashboard() {
   const visitsByPromoterRaw = data?.visitsByPromoter || [];
   const promotersList = promotersData?.promoters || [];
   
-  // Memoizar visitsByPromoter para evitar recálculos desnecessários
-  const visitsByPromoter = useMemo(() => {
-    if (!visitsByPromoterRaw || visitsByPromoterRaw.length === 0) {
-      return [];
-    }
+  // Calcular visitsByPromoter diretamente sem useMemo para evitar problemas com dependências
+  // Isso garante que o cálculo sempre acontece na mesma ordem
+  let visitsByPromoter: any[] = [];
+  if (visitsByPromoterRaw && visitsByPromoterRaw.length > 0) {
     if (!promotersList || promotersList.length === 0) {
-      return visitsByPromoterRaw.map((item: any) => ({
+      visitsByPromoter = visitsByPromoterRaw.map((item: any) => ({
         ...item,
         promoterName: `Promotor ${item.promoterId?.slice(0, 8) || 'Unknown'}`,
       }));
-    }
-    return visitsByPromoterRaw.map((item: any) => {
-      if (!item || !item.promoterId) {
+    } else {
+      visitsByPromoter = visitsByPromoterRaw.map((item: any) => {
+        if (!item || !item.promoterId) {
+          return {
+            ...item,
+            promoterName: 'Desconhecido',
+          };
+        }
+        const promoter = promotersList.find((p: any) => p && p.id === item.promoterId);
         return {
           ...item,
-          promoterName: 'Desconhecido',
+          promoterName: promoter?.name || `Promotor ${item.promoterId.slice(0, 8)}`,
         };
-      }
-      const promoter = promotersList.find((p: any) => p && p.id === item.promoterId);
-      return {
-        ...item,
-        promoterName: promoter?.name || `Promotor ${item.promoterId.slice(0, 8)}`,
-      };
-    });
-  }, [visitsByPromoterRaw, promotersList]);
-
-  // Calcular métricas de problemas - MOVER PARA DEPOIS DOS EARLY RETURNS
-  // Usar chave estável para evitar recálculos desnecessários
-  const problemMetricsKey = `${promotersList?.length || 0}-${visitsByPromoterRaw?.length || 0}`;
-  const problemMetrics = useMemo(() => {
-    if (!data || !promotersData || !promotersList || promotersList.length === 0) {
-      return {
-        inactiveToday: 0,
-        withoutPhotos: 0,
-        offSchedule: 0,
-        routesNotStarted: 0,
-        totalPromoters: 0,
-        problemPromoters: [],
-      };
+      });
     }
+  }
 
+  // Calcular métricas de problemas diretamente sem useMemo
+  // Isso garante que o cálculo sempre acontece na mesma ordem
+  let problemMetrics = {
+    inactiveToday: 0,
+    withoutPhotos: 0,
+    offSchedule: 0,
+    routesNotStarted: 0,
+    totalPromoters: 0,
+    problemPromoters: [] as any[],
+  };
+
+  if (data && promotersData && promotersList && promotersList.length > 0) {
     const promoters = promotersList;
     const visits = visitsByPromoterRaw;
     
@@ -264,7 +250,7 @@ export default function Dashboard() {
       return !hasVisitToday;
     });
 
-    return {
+    problemMetrics = {
       inactiveToday: inactiveToday.length,
       withoutPhotos: promotersWithoutPhotos.length,
       offSchedule: promotersOffSchedule.length,
@@ -276,8 +262,7 @@ export default function Dashboard() {
         ...promotersOffSchedule.slice(0, 3),
       ].slice(0, 10),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problemMetricsKey]);
+  }
 
   // Cards de KPIs de Problemas
   const problemKPIs = [
