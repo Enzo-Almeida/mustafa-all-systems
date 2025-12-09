@@ -121,9 +121,73 @@ export default function Dashboard() {
     },
   });
 
-  // Calcular métricas de problemas
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-text-secondary">Carregando dados...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Card className="max-w-md border-error-500">
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="text-error-500">
+                <AlertIcon />
+              </div>
+              <div>
+                <h3 className="text-error-500 font-semibold">Erro ao carregar dashboard</h3>
+                <p className="text-text-secondary text-sm mt-1">
+                  Não foi possível carregar os dados. Tente novamente.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Garantir que sempre temos valores válidos
+  const stats = data?.stats || {};
+  const visitsByPromoterRaw = data?.visitsByPromoter || [];
+  const promotersList = promotersData?.promoters || [];
+  
+  // Memoizar visitsByPromoter para evitar recálculos desnecessários
+  const visitsByPromoter = useMemo(() => {
+    if (!visitsByPromoterRaw || visitsByPromoterRaw.length === 0) {
+      return [];
+    }
+    if (!promotersList || promotersList.length === 0) {
+      return visitsByPromoterRaw.map((item: any) => ({
+        ...item,
+        promoterName: `Promotor ${item.promoterId?.slice(0, 8) || 'Unknown'}`,
+      }));
+    }
+    return visitsByPromoterRaw.map((item: any) => {
+      if (!item || !item.promoterId) {
+        return {
+          ...item,
+          promoterName: 'Desconhecido',
+        };
+      }
+      const promoter = promotersList.find((p: any) => p && p.id === item.promoterId);
+      return {
+        ...item,
+        promoterName: promoter?.name || `Promotor ${item.promoterId.slice(0, 8)}`,
+      };
+    });
+  }, [visitsByPromoterRaw, promotersList]);
+
+  // Calcular métricas de problemas - MOVER PARA DEPOIS DOS EARLY RETURNS
   const problemMetrics = useMemo(() => {
-    if (!data || !promotersData) {
+    if (!data || !promotersData || !promotersList || promotersList.length === 0) {
       return {
         inactiveToday: 0,
         withoutPhotos: 0,
@@ -134,8 +198,8 @@ export default function Dashboard() {
       };
     }
 
-    const promoters = promotersData.promoters || [];
-    const visits = data.visitsByPromoter || [];
+    const promoters = promotersList;
+    const visits = visitsByPromoterRaw;
     
     // Promotores sem atividade hoje
     const promotersWithVisitsToday = new Set(
@@ -195,64 +259,7 @@ export default function Dashboard() {
         ...promotersOffSchedule.slice(0, 3),
       ].slice(0, 10),
     };
-  }, [data?.visitsByPromoter, promotersData?.promoters]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-          <div className="text-text-secondary">Carregando dados...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Card className="max-w-md border-error-500">
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <div className="text-error-500">
-                <AlertIcon />
-              </div>
-              <div>
-                <h3 className="text-error-500 font-semibold">Erro ao carregar dashboard</h3>
-                <p className="text-text-secondary text-sm mt-1">
-                  Não foi possível carregar os dados. Tente novamente.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const stats = data?.stats || {};
-  const visitsByPromoterRaw = data?.visitsByPromoter || [];
-  const promotersList = promotersData?.promoters || [];
-  
-  // Memoizar visitsByPromoter para evitar recálculos desnecessários
-  const visitsByPromoter = useMemo(() => {
-    if (!visitsByPromoterRaw || visitsByPromoterRaw.length === 0) {
-      return [];
-    }
-    return visitsByPromoterRaw.map((item: any) => {
-      if (!item || !item.promoterId) {
-        return {
-          ...item,
-          promoterName: 'Desconhecido',
-        };
-      }
-      const promoter = promotersList.find((p: any) => p && p.id === item.promoterId);
-      return {
-        ...item,
-        promoterName: promoter?.name || `Promotor ${item.promoterId.slice(0, 8)}`,
-      };
-    });
-  }, [visitsByPromoterRaw, promotersList]);
+  }, [data, promotersData, promotersList, visitsByPromoterRaw]);
 
   // Cards de KPIs de Problemas
   const problemKPIs = [
