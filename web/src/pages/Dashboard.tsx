@@ -123,34 +123,62 @@ export default function Dashboard() {
 
   // Calcular métricas de problemas
   const problemMetrics = useMemo(() => {
-    const promoters = promotersData?.promoters || [];
-    const visits = data?.visitsByPromoter || [];
+    if (!data || !promotersData) {
+      return {
+        inactiveToday: 0,
+        withoutPhotos: 0,
+        offSchedule: 0,
+        routesNotStarted: 0,
+        totalPromoters: 0,
+        problemPromoters: [],
+      };
+    }
+
+    const promoters = promotersData.promoters || [];
+    const visits = data.visitsByPromoter || [];
     
     // Promotores sem atividade hoje
     const promotersWithVisitsToday = new Set(
       visits.filter((v: any) => {
-        const visitDate = new Date(v.date || Date.now());
+        if (!v || !v.date) return false;
+        const visitDate = new Date(v.date);
         const today = new Date();
-        return visitDate.toDateString() === today.toDateString();
-      }).map((v: any) => v.promoterId)
+        today.setHours(0, 0, 0, 0);
+        visitDate.setHours(0, 0, 0, 0);
+        return visitDate.getTime() === today.getTime();
+      }).map((v: any) => v.promoterId).filter(Boolean)
     );
     
-    const inactiveToday = promoters.filter((p: any) => !promotersWithVisitsToday.has(p.id));
+    const inactiveToday = promoters.filter((p: any) => p && p.id && !promotersWithVisitsToday.has(p.id));
     
     // Promotores sem fotos (simulado - precisa de dados reais)
     const promotersWithoutPhotos = promoters.filter((p: any) => {
-      const promoterVisits = visits.filter((v: any) => v.promoterId === p.id);
+      if (!p || !p.id) return false;
+      const promoterVisits = visits.filter((v: any) => v && v.promoterId === p.id);
       return promoterVisits.length > 0 && promoterVisits.every((v: any) => (v.photoCount || 0) === 0);
     });
     
     // Promotores fora do horário (simulado)
+    // Usar hash baseado no ID para determinar consistentemente
+    const hash = (str: string) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash);
+    };
     const promotersOffSchedule = promoters.filter((p: any) => {
-      // Lógica para verificar se está fora do horário planejado
-      return Math.random() > 0.7; // Placeholder
+      if (!p || !p.id) return false;
+      // Lógica para verificar se está fora do horário planejado (simulado)
+      const seed = hash(p.id);
+      return (seed % 10) > 7; // ~30% dos promotores fora do horário
     });
     
     // Rotas não iniciadas
     const routesNotStarted = promoters.filter((p: any) => {
+      if (!p || !p.id) return false;
       const hasVisitToday = promotersWithVisitsToday.has(p.id);
       return !hasVisitToday;
     });
@@ -167,7 +195,7 @@ export default function Dashboard() {
         ...promotersOffSchedule.slice(0, 3),
       ].slice(0, 10),
     };
-  }, [data, promotersData]);
+  }, [data?.visitsByPromoter, promotersData?.promoters]);
 
   if (isLoading) {
     return (
@@ -204,17 +232,27 @@ export default function Dashboard() {
 
   const stats = data?.stats || {};
   const visitsByPromoterRaw = data?.visitsByPromoter || [];
+  const promotersList = promotersData?.promoters || [];
   
   // Memoizar visitsByPromoter para evitar recálculos desnecessários
   const visitsByPromoter = useMemo(() => {
+    if (!visitsByPromoterRaw || visitsByPromoterRaw.length === 0) {
+      return [];
+    }
     return visitsByPromoterRaw.map((item: any) => {
-      const promoter = promotersData?.promoters?.find((p: any) => p.id === item.promoterId);
+      if (!item || !item.promoterId) {
+        return {
+          ...item,
+          promoterName: 'Desconhecido',
+        };
+      }
+      const promoter = promotersList.find((p: any) => p && p.id === item.promoterId);
       return {
         ...item,
-        promoterName: promoter?.name || `Promotor ${item.promoterId?.slice(0, 8) || 'Unknown'}`,
+        promoterName: promoter?.name || `Promotor ${item.promoterId.slice(0, 8)}`,
       };
     });
-  }, [visitsByPromoterRaw, promotersData?.promoters]);
+  }, [visitsByPromoterRaw, promotersList]);
 
   // Cards de KPIs de Problemas
   const problemKPIs = [
@@ -272,7 +310,7 @@ export default function Dashboard() {
 
   // Preparar dados para Analytics
   const analyticsData = useMemo(() => {
-    if (!data || !visitsByPromoter) {
+    if (!data || !visitsByPromoter || visitsByPromoter.length === 0) {
       return {
         visitsOverTime: [],
         performanceByPromoter: [],
@@ -287,20 +325,25 @@ export default function Dashboard() {
     }
 
     const visits = data.visitsByPromoter || [];
-    const visitsOverTime = visits.map((v: any) => ({
-      date: new Date(v.date || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-      visits: v.visitCount || 0,
-      completed: v.completedCount || 0,
-    }));
+    const visitsOverTime = visits
+      .filter((v: any) => v && v.date)
+      .map((v: any) => ({
+        date: new Date(v.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        visits: v.visitCount || 0,
+        completed: v.completedCount || 0,
+      }));
 
-    const performanceByPromoter = visitsByPromoter.map((v: any) => ({
-      name: v.promoterName || 'Desconhecido',
-      visits: v.visitCount || 0,
-      hours: v.totalHours || 0,
-      photos: v.totalPhotos || 0,
-    }));
+    const performanceByPromoter = visitsByPromoter
+      .filter((v: any) => v)
+      .map((v: any) => ({
+        name: v.promoterName || 'Desconhecido',
+        visits: v.visitCount || 0,
+        hours: v.totalHours || 0,
+        photos: v.totalPhotos || 0,
+      }));
 
     const activityHeatmap = visits
+      .filter((v: any) => v)
       .reduce((acc: any, v: any) => {
         const storeName = v.storeName || 'Desconhecida';
         const existing = acc.find((a: any) => a.store === storeName);
@@ -314,29 +357,52 @@ export default function Dashboard() {
       .sort((a: any, b: any) => b.visits - a.visits)
       .slice(0, 12);
 
+    const totalVisits = stats.totalVisits || 0;
+    const totalHours = parseFloat(stats.totalHours || '0');
+    const totalPhotos = stats.totalPhotos || 0;
+
     return {
       visitsOverTime,
       performanceByPromoter,
       activityHeatmap,
       trends: {
-        visits: { current: stats.totalVisits || 0, previous: (stats.totalVisits || 0) * 0.9, change: 10 },
-        hours: { current: parseFloat(stats.totalHours || '0'), previous: parseFloat(stats.totalHours || '0') * 0.9, change: 10 },
-        photos: { current: stats.totalPhotos || 0, previous: (stats.totalPhotos || 0) * 0.9, change: 10 },
+        visits: { current: totalVisits, previous: totalVisits * 0.9, change: 10 },
+        hours: { current: totalHours, previous: totalHours * 0.9, change: 10 },
+        photos: { current: totalPhotos, previous: totalPhotos * 0.9, change: 10 },
         compliance: { current: 85, previous: 80, change: 5 },
       },
     };
-  }, [data, visitsByPromoter, stats]);
+  }, [data?.visitsByPromoter, visitsByPromoter, stats?.totalVisits, stats?.totalHours, stats?.totalPhotos]);
 
   // Preparar dados de conformidade (simulado - em produção viria do backend)
+  // Usar hash simples baseado no ID para gerar valores consistentes
   const complianceData = useMemo(() => {
-    return (promotersData?.promoters || []).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      photoCompliance: Math.random() * 100,
-      scheduleCompliance: Math.random() * 100,
-      routeCompliance: Math.random() * 100,
-    }));
-  }, [promotersData]);
+    if (!promotersList || promotersList.length === 0) {
+      return [];
+    }
+    const hash = (str: string) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash);
+    };
+    
+    return promotersList
+      .filter((p: any) => p && p.id)
+      .map((p: any) => {
+        const seed = hash(p.id);
+        return {
+          id: p.id,
+          name: p.name || 'Desconhecido',
+          photoCompliance: (seed % 100),
+          scheduleCompliance: ((seed * 2) % 100),
+          routeCompliance: ((seed * 3) % 100),
+        };
+      });
+  }, [promotersList]);
 
   return (
     <div className="space-y-6">
@@ -742,13 +808,13 @@ export default function Dashboard() {
       )}
 
       {/* Painel de Análises */}
-      {activeTab === 'analytics' && <AnalyticsPanel data={analyticsData} />}
+      {activeTab === 'analytics' ? <AnalyticsPanel data={analyticsData} /> : null}
 
       {/* Painel de Conformidade */}
-      {activeTab === 'compliance' && <CompliancePanel promoters={complianceData} />}
+      {activeTab === 'compliance' ? <CompliancePanel promoters={complianceData} /> : null}
 
       {/* Ferramentas de Exportação */}
-      {activeTab === 'export' && <ExportTools filters={filters} />}
+      {activeTab === 'export' ? <ExportTools filters={filters} /> : null}
     </div>
   );
 }
